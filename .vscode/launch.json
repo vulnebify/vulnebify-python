@@ -1,0 +1,25 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [      
+        {
+            "name": "Debug CLI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "vulnebify.cli",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "${input:cliArgs}"
+              ],
+        }
+    ],
+    "inputs": [
+      {
+        "id": "cliArgs",
+        "type": "promptString",
+        "description": "Enter CLI arguments (e.g. scan run vulnebify.com --ports 80 443 --scanners port)"
+      }
+    ]
+}
