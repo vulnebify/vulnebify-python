@@ -192,13 +192,13 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
     print("")
     print("A cyber defense platform. See more: https://vulnebify.com/")
     print("")
-    parser = argparse.ArgumentParser(prog="vulnebify", description="Vulnebify CLI")
+    parser = argparse.ArgumentParser(prog="vulnebify")
     parser.add_argument("-a", "--api-url", default="https://api.vulnebify.com/v1", help="API url (default: https://api.vulnebify.com/v1)")
     parser.set_defaults(func=lambda _: parser.print_help())
     subparsers = parser.add_subparsers(dest="action")
     
     # LOGIN group
-    login_parser = subparsers.add_parser("login")
+    login_parser = subparsers.add_parser("login", help="Login to the")
     login_parser.add_argument("-k", "--api-key", help="API key for authentication. Prefer using the interactive prompt for security. Only use this flag in CI/CD or trusted environments. You can also set the VULNEBIFY_API_KEY environment variable.")
     login_parser.set_defaults(func=lambda args: login(args.api_key, args.api_url))
 
@@ -224,7 +224,7 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
     list_scans_parser.set_defaults(func=lambda _: list_scans())
 
     # GET group
-    get_parser = subparsers.add_parser("get", help="Describe previous scans")
+    get_parser = subparsers.add_parser("get", help="Get previous scan")
     get_parser.set_defaults(func=lambda _: get_parser.print_help())
     get_subparsers = get_parser.add_subparsers(help="Get operations")
 
