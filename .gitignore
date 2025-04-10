@@ -85,5 +85,5 @@ docker-compose.override.yml
 *.log
 *.out
 
-# Proxy lists
-webshare.txt
+# CIDRe
+output/cidr
