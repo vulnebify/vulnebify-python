@@ -208,7 +208,7 @@ class Vulnebify:
     def __init__(
         self,
         api_key: str,
-        api_url: str = "http://localhost:8000/v1",
+        api_url: str = "https://api.vulnebify.com/v1",
         proxy_url: str | None = None,
     ):
         client = VulnebifyHttpClient(api_url, api_key, "", proxy_url)

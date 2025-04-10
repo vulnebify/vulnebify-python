@@ -7,7 +7,7 @@ setup(
     name="vulnebify",
     version="1.0.0",
     packages=find_packages(),
-    install_requires=["netaddr==1.3.0", "requests==2.32.3"],
+    install_requires=["requests==2.32.3", "pydantic==2.11.2"],
     entry_points={
         "console_scripts": [
             "vulnebify=vulnebify.cli:main",
