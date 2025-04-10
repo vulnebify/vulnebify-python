@@ -212,7 +212,7 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
     run_scans_parser.add_argument("scopes", nargs="+", help="Scopes to scan")
     run_scans_parser.add_argument("-p", "--ports", nargs="*", help="Ports to scan (default: top100)")
     run_scans_parser.add_argument("-s", "--scanners", nargs="*", help="Scanners to use")
-    run_scans_parser.set_defaults(func=lambda args: run_scan(args.scopes, args.ports or [], args.scanners or []))
+    run_scans_parser.set_defaults(func=lambda args: run_scan(args.scopes, args.ports or ["top100"], args.scanners or []))
 
     # LIST group
     list_parser = subparsers.add_parser("list", aliases=["ls"], help="List previous scans")
@@ -274,6 +274,7 @@ def main():
         print(e.message)
     except KeyboardInterrupt:
         print("👋 Gracefully exiting. Goodbye!")
+    print("")
 
 
 if __name__ == "__main__":
