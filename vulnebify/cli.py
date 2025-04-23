@@ -129,9 +129,10 @@ def run_scan(scopes: List[str], ports: List[int | str], scanners: List[str]):
 
     scan = _vulnebify.scan.run(scopes, ports, scanners)
     print(f"🆔 Scan started with ID: {scan.scan_id}\n")
-    print(
-        f"You can check the details any time by running `vulnebify get scan {scan.scan_id} --summary`"
-    )
+    print(f"You can check the details any time by running:")
+    print(f"- vulnebify get scan {scan.scan_id} --summary")
+    print(f"- vulnebify get scan {scan.scan_id} --report")
+    print("")
     print(f"🔗 Or by visiting the link: https://vulnebify.com/scan/{scan.scan_id}\n")
 
     previous_output_lines = 0
@@ -145,14 +146,22 @@ def run_scan(scopes: List[str], ports: List[int | str], scanners: List[str]):
             sys.stdout.flush()
 
         output_lines = [f"🔄 Scan status: {scan.status.value}"]
+
+        if scan.status == ScanStatus.QUEUED:
+            output_lines = [f"🔄 Scan status: {scan.status.value} (position 0)"]
+        if scan.status == ScanStatus.FINISHED:
+            output_lines = [f"✅ Scan status: {scan.status.value}"]
+        if scan.status == ScanStatus.CANCELED:
+            output_lines = [f"🛑 Scan status: {scan.status.value}"]
+
         for line in output_lines:
             print(line)
 
         previous_output_lines = len(output_lines)
 
         if scan.status in [ScanStatus.FINISHED, ScanStatus.CANCELED]:
-            print(f"\n✅ Scan finished with status: {scan.status.value}")
             break
+
         time.sleep(1)
 
 
@@ -263,7 +272,6 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
         _vulnebify = Vulnebify(api_key, api_url)
         
     args.func(args)
-    print("")
     # fmt: on
 
 
