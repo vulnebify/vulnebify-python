@@ -18,6 +18,13 @@ VULNEBIFY_API_URL = "VULNEBIFY_API_URL"
 _vulnebify: Vulnebify | None = Vulnebify
 
 
+def parse_scopes(args):
+    if args.file:
+        with open(args.file) as f:
+            return [line.strip() for line in f if line.strip()]
+    return args.scopes or []
+
+
 def get_api_key():
     api_key = os.getenv(VULNEBIFY_API_KEY)
 
@@ -120,7 +127,12 @@ def get_domain(domain: str):
     print(response)
 
 
-def run_scan(scopes: List[str], ports: List[int | str], scanners: List[str]):
+def run_scan(
+    scopes: List[str],
+    ports: List[int | str],
+    scanners: List[str],
+    wait: bool,
+):
     if not scopes:
         print("⚠️  You must provide at least one domain, IP, or CIDR to scan")
         return
@@ -133,8 +145,12 @@ def run_scan(scopes: List[str], ports: List[int | str], scanners: List[str]):
     print(f"- vulnebify get scan {scan.scan_id} --summary")
     print(f"- vulnebify get scan {scan.scan_id} --report")
     print("")
-    print(f"🔗 Or by visiting the link: https://vulnebify.com/scan/{scan.scan_id}\n")
+    print(f"🔗 Or by visiting the link: https://vulnebify.com/scan/{scan.scan_id}")
 
+    if not wait:
+        return
+
+    print("")
     previous_output_lines = 0
     while True:
         scan = _vulnebify.scan.get(scan.scan_id)
@@ -218,10 +234,15 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
 
     # run group -> run scan
     run_scans_parser = run_subparsers.add_parser("scans", aliases=["scan"], help="Run a scan")
-    run_scans_parser.add_argument("scopes", nargs="+", help="Scopes to scan")
+    
+    run_scans_group = run_scans_parser.add_mutually_exclusive_group(required=True)
+    run_scans_group.add_argument("scopes", nargs="*", help="Scopes to scan (e.g. domain, IP)")
+    run_scans_group.add_argument("-f", "--file", help="Path to file with one scope per line")
+    
     run_scans_parser.add_argument("-p", "--ports", nargs="*", help="Ports to scan (default: top100)")
-    run_scans_parser.add_argument("-s", "--scanners", nargs="*", help="Scanners to use")
-    run_scans_parser.set_defaults(func=lambda args: run_scan(args.scopes, args.ports or ["top100"], args.scanners or []))
+    run_scans_parser.add_argument("-s", "--scanners", nargs="*", help="Scanners to use (default: basic)")
+    run_scans_parser.add_argument("-w", "--wait", action="store_true", help="Wait for scan to finish (default: false)")
+    run_scans_parser.set_defaults(func=lambda args: run_scan(parse_scopes(args), args.ports or ["top100"], args.scanners or ["basic"], args.wait))
 
     # LIST group
     list_parser = subparsers.add_parser("list", aliases=["ls"], help="List previous scans")

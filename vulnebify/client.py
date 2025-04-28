@@ -1,7 +1,6 @@
 import requests
 import requests.adapters
 import requests.auth
-import requests.status_codes
 
 import uuid
 
