@@ -223,7 +223,7 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
     subparsers = parser.add_subparsers(dest="action")
     
     # LOGIN group
-    login_parser = subparsers.add_parser("login", help="Login to the")
+    login_parser = subparsers.add_parser("login", help="Login to the API")
     login_parser.add_argument("-k", "--api-key", help="API key for authentication. Prefer using the interactive prompt for security. Only use this flag in CI/CD or trusted environments. You can also set the VULNEBIFY_API_KEY environment variable.")
     login_parser.set_defaults(func=lambda args: login(args.api_key, args.api_url))
 
