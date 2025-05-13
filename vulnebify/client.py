@@ -21,13 +21,11 @@ class VulnebifyHttpClient:
     def __init__(
         self,
         base_url: str,
-        username: str,
-        password: str,
+        api_key: str,
         proxy_url: str | None = None,
     ):
         self.__base_url = base_url.rstrip("/")
-        self.__username = username
-        self.__password = password
+        self.__api_key = api_key
         self.__proxy_url = proxy_url
         self.__session = None
 
@@ -69,7 +67,7 @@ class VulnebifyHttpClient:
 
     def __create_session(self):
         session = requests.Session()
-        session.auth = requests.auth.HTTPBasicAuth(self.__username, self.__password)
+        session.headers.update({"Authorization": f"Bearer {self.__api_key}"})
 
         if self.__proxy_url:
             session.proxies.update(
@@ -210,7 +208,7 @@ class Vulnebify:
         api_url: str = "https://api.vulnebify.com/v1",
         proxy_url: str | None = None,
     ):
-        client = VulnebifyHttpClient(api_url, api_key, "", proxy_url)
+        client = VulnebifyHttpClient(api_url, api_key, proxy_url)
 
         self.domain = VulnebifyDomain(client)
         self.key = VulnebifyKey(client)
