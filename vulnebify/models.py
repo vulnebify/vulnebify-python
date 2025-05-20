@@ -26,6 +26,10 @@ class ScanRequest(BaseModel):
     scanners: List[str] = []
 
 
+class ScanRunResponse(BaseModel):
+    scan_id: str
+
+
 class ScanResponse(BaseModel):
     scan_id: str
 

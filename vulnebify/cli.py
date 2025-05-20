@@ -8,7 +8,7 @@ import getpass
 from typing import List
 
 from .client import Vulnebify
-from .models import ScanStatus
+from .models import ScanResponse, ScanStatus
 from .errors import VulnebifyError
 
 CONFIG_PATH = os.path.expanduser("~/.vulnebifyrc")
@@ -139,21 +139,21 @@ def run_scan(
 
     print(f"🚀 Initiating scan for: {', '.join(scopes)}")
 
-    scan = _vulnebify.scan.run(scopes, ports, scanners)
-    print(f"🆔 Scan started with ID: {scan.scan_id}\n")
+    scan_id = _vulnebify.scan.run(scopes, ports, scanners)
+    print(f"🆔 Scan started with ID: {scan_id}\n")
     print(f"You can check the details any time by running:")
-    print(f"- vulnebify get scan {scan.scan_id} --summary")
-    print(f"- vulnebify get scan {scan.scan_id} --report")
+    print(f"- vulnebify get scan {scan_id}")
     print("")
-    print(f"🔗 Or by visiting the link: https://vulnebify.com/scan/{scan.scan_id}")
+    print(f"🔗 Or by visiting the link: https://vulnebify.com/scan/{scan_id}")
 
     if not wait:
         return
 
     print("")
     previous_output_lines = 0
+    scan: ScanResponse = None
     while True:
-        scan = _vulnebify.scan.get(scan.scan_id)
+        scan = _vulnebify.scan.get(scan_id)
 
         if previous_output_lines > 0:
             sys.stdout.write(

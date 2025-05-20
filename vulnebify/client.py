@@ -166,7 +166,7 @@ class VulnebifyScan:
         ports: List[str | int],
         scanners: List[str],
         idempotency_key: str | None = None,
-    ) -> ScanResponse:
+    ) -> str:
         with self.__client as client:
             request = ScanRequest(
                 scopes=scopes,
@@ -176,7 +176,7 @@ class VulnebifyScan:
 
             response = client.post(f"/scan/", request, idempotency_key=idempotency_key)
 
-            return ScanResponse.model_validate_json(response)
+            return ScanRunResponse.model_validate_json(response).scan_id
 
     def get(self, scan_id: str) -> ScanResponse:
         with self.__client as client:
