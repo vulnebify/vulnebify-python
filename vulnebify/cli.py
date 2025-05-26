@@ -142,7 +142,7 @@ def run_scan(
     scan_id = _vulnebify.scan.run(scopes, ports, scanners)
     print(f"🆔 Scan started with ID: {scan_id}\n")
     print(f"You can check the details any time by running:")
-    print(f"- vulnebify get scan {scan_id}")
+    print(f"vulnebify get scan {scan_id}")
     print("")
     print(f"🔗 Or by visiting the link: https://vulnebify.com/scan/{scan_id}")
 
@@ -203,10 +203,9 @@ def list_scans():
         )
 
 
-def cli():
-    # fmt: off
+def print_title(parser: argparse.ArgumentParser):
     print(
-r"""
+        r"""
 __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
 \ \   / /| | | || |    | \ | || ____|| __ ) |_ _||  ___|\ \ / /
  \ \ / / | | | || |    |  \| ||  _|  |  _ \  | | | |_    \ V / 
@@ -215,11 +214,16 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
 """
     )
     print("")
-    print("A cyber defense platform. See more: https://vulnebify.com/")
+    print("A cyber defense platform. See more: https://about.vulnebify.com/")
     print("")
+    parser.print_help()
+
+
+def cli():
+    # fmt: off
     parser = argparse.ArgumentParser(prog="vulnebify")
     parser.add_argument("-a", "--api-url", default="https://api.vulnebify.com/v1", help="API url (default: https://api.vulnebify.com/v1)")
-    parser.set_defaults(func=lambda _: parser.print_help())
+    parser.set_defaults(func=lambda _: print_title(parser))
     subparsers = parser.add_subparsers(dest="action")
     
     # LOGIN group
@@ -229,7 +233,7 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
 
     # RUN group
     run_parser = subparsers.add_parser("run", help="Run scan")
-    run_parser.set_defaults(func=lambda _: run_parser.print_help())
+    run_parser.set_defaults(func=lambda _: print_title(run_parser))
     run_subparsers = run_parser.add_subparsers(dest="tool")
 
     # run group -> run scan
@@ -246,7 +250,7 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
 
     # LIST group
     list_parser = subparsers.add_parser("list", aliases=["ls"], help="List previous scans")
-    list_parser.set_defaults(func=lambda _: list_parser.print_help())
+    list_parser.set_defaults(func=lambda _: print_title(list_parser))
     list_subparsers = list_parser.add_subparsers(help="List operations")
 
     # list group -> list scans
@@ -255,7 +259,7 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
 
     # GET group
     get_parser = subparsers.add_parser("get", help="Get previous scan")
-    get_parser.set_defaults(func=lambda _: get_parser.print_help())
+    get_parser.set_defaults(func=lambda _: print_title(get_parser))
     get_subparsers = get_parser.add_subparsers(help="Get operations")
 
     # get group -> get scan
