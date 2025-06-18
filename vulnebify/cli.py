@@ -239,9 +239,8 @@ def cli():
     # run group -> run scan
     run_scans_parser = run_subparsers.add_parser("scans", aliases=["scan"], help="Run a scan")
     
-    run_scans_group = run_scans_parser.add_mutually_exclusive_group(required=True)
-    run_scans_group.add_argument("scopes", nargs="*", help="Scopes to scan (e.g. domain, IP)")
-    run_scans_group.add_argument("-f", "--file", help="Path to file with one scope per line")
+    run_scans_parser.add_argument("scopes", nargs="*", help="Scopes to scan (e.g. domain, IP)")
+    run_scans_parser.add_argument("-f", "--file", help="Path to file with one scope per line")
     
     run_scans_parser.add_argument("-p", "--ports", nargs="*", help="Ports to scan (default: top100)")
     run_scans_parser.add_argument("-s", "--scanners", nargs="*", help="Scanners to use (default: basic)")
