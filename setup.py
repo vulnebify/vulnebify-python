@@ -15,7 +15,7 @@ setup(
     },
     author="Alex @ Vulnebify",
     author_email="contact.pypi@vulnebify.com",
-    description="",
+    description="Python library for the Vulnebify API. Run scans, inspect hosts/domains, and fetch results with real-time updates and JSON output.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/vulnebify/vulnebify-python",

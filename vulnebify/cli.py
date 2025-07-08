@@ -10,12 +10,16 @@ from typing import List
 from .client import Vulnebify
 from .models import ScanResponse, ScanStatus
 from .errors import VulnebifyError
+from .output import OutputType, Output, HumanOutput, JsonOutput
 
 CONFIG_PATH = os.path.expanduser("~/.vulnebifyrc")
 VULNEBIFY_API_KEY = "VULNEBIFY_API_KEY"
 VULNEBIFY_API_URL = "VULNEBIFY_API_URL"
 
-_vulnebify: Vulnebify | None = Vulnebify
+_vulnebify: Vulnebify | None = None
+_output: Output | None = None
+
+CHECKOUT_TIMEOUT_SEC = 3600
 
 
 def parse_scopes(args):
@@ -96,7 +100,7 @@ def login(api_key: str | None, api_url: str):
     retry = 0
     previous_output_lines = 0
 
-    while not vulnebify.key.active() and retry <= 300:
+    while not vulnebify.key.active() and retry <= CHECKOUT_TIMEOUT_SEC:
 
         if previous_output_lines > 0:
             sys.stdout.write(
@@ -104,7 +108,9 @@ def login(api_key: str | None, api_url: str):
             )
             sys.stdout.flush()
 
-        output_lines = [f"🔄 Still waiting for checkout... ({300 - retry}s remaining)"]
+        output_lines = [
+            f"🔄 Still waiting for checkout... ({CHECKOUT_TIMEOUT_SEC - retry}s remaining)"
+        ]
         for line in output_lines:
             print(line)
 
@@ -115,16 +121,6 @@ def login(api_key: str | None, api_url: str):
 
     print("")
     save_api_key(response.api_key)
-
-
-def get_host(ip_address: str):
-    response = _vulnebify.host.get(ip_address)
-    print(json.dumps(json.loads(response), indent=2))
-
-
-def get_domain(domain: str):
-    response = _vulnebify.domain.get(domain)
-    print(response)
 
 
 def run_scan(
@@ -161,19 +157,7 @@ def run_scan(
             )
             sys.stdout.flush()
 
-        output_lines = [f"🔄 Scan status: {scan.status.value}"]
-
-        if scan.status == ScanStatus.QUEUED:
-            output_lines = [f"🔄 Scan status: {scan.status.value} (position 0)"]
-        if scan.status == ScanStatus.FINISHED:
-            output_lines = [f"✅ Scan status: {scan.status.value}"]
-        if scan.status == ScanStatus.CANCELED:
-            output_lines = [f"🛑 Scan status: {scan.status.value}"]
-
-        for line in output_lines:
-            print(line)
-
-        previous_output_lines = len(output_lines)
+        previous_output_lines = _output.print_scan_run(scan)
 
         if scan.status in [ScanStatus.FINISHED, ScanStatus.CANCELED]:
             break
@@ -181,26 +165,34 @@ def run_scan(
         time.sleep(1)
 
 
-def get_scan(scan_id: str, is_summary: bool, is_report: bool):
-    if is_summary:
-        summary = _vulnebify.scan.summary(scan_id)
-        print(summary.model_dump_json(indent=2))
-    elif is_report:
-        report = _vulnebify.scan.report(scan_id)
-        print(report.model_dump_json(indent=2))
-    else:
-        scan = _vulnebify.scan.get(scan_id)
-        print(scan.model_dump_json(indent=2))
+def cancel_scan(scan_id: str):
+    _vulnebify.scan.cancel(scan_id)
+    _output.print_scan_cancel(scan_id)
+
+
+def get_scan(scan_id: str):
+    scan = _vulnebify.scan.get(scan_id)
+    _output.print_scan(scan)
 
 
 def list_scans():
     scans = _vulnebify.scan.list()
-    print(f"📋 Total number of scans: {scans.total}")
-    print("")
-    for idx, scan in enumerate(scans.items):
-        print(
-            f"{idx+1}. {scan.scan_id} - ({",".join(scan.scopes)}) - {scan.status.value}"
-        )
+    _output.print_scan_list(scans)
+
+
+def list_scanners():
+    scanners = _vulnebify.scanner.list()
+    _output.print_scanner_list(scanners)
+
+
+def get_host(address: str):
+    host = _vulnebify.host.get(address)
+    _output.print_host(host)
+
+
+def get_domain(address: str):
+    domain = _vulnebify.domain.get(address)
+    _output.print_host(domain)
 
 
 def print_title(parser: argparse.ArgumentParser):
@@ -221,6 +213,9 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
 
 def cli():
     # fmt: off
+    output_parser = argparse.ArgumentParser(add_help=False)
+    output_parser.add_argument("-o", "--output", type=OutputType, choices=["human", "json"], default=OutputType.HUMAN, help="Output format (default: human)")
+    
     parser = argparse.ArgumentParser(prog="vulnebify")
     parser.add_argument("-a", "--api-url", default="https://api.vulnebify.com/v1", help="API url (default: https://api.vulnebify.com/v1)")
     parser.set_defaults(func=lambda _: print_title(parser))
@@ -237,52 +232,70 @@ def cli():
     run_subparsers = run_parser.add_subparsers(dest="tool")
 
     # run group -> run scan
-    run_scans_parser = run_subparsers.add_parser("scans", aliases=["scan"], help="Run a scan")
+    run_scans_parser = run_subparsers.add_parser("scans", aliases=["scan"], parents=[output_parser], help="Run a scan")
     
-    run_scans_parser.add_argument("scopes", nargs="*", help="Scopes to scan (e.g. domain, IP)")
+    run_scans_parser.add_argument("scopes", nargs="*", help="Scopes to scan (domain, IP, CIDR)")
     run_scans_parser.add_argument("-f", "--file", help="Path to file with one scope per line")
     
     run_scans_parser.add_argument("-p", "--ports", nargs="*", help="Ports to scan (default: top100)")
-    run_scans_parser.add_argument("-s", "--scanners", nargs="*", help="Scanners to use (default: basic)")
+    run_scans_parser.add_argument("-s", "--scanners", nargs="*", help="Scanners to use (default: empty)")
     run_scans_parser.add_argument("-w", "--wait", action="store_true", help="Wait for scan to finish (default: false)")
-    run_scans_parser.set_defaults(func=lambda args: run_scan(parse_scopes(args), args.ports or ["top100"], args.scanners or ["basic"], args.wait))
+    run_scans_parser.set_defaults(func=lambda args: run_scan(parse_scopes(args), args.ports or ["top100"], args.scanners or [], args.wait))
 
+    # CANCEL group
+    cancel_parser = subparsers.add_parser("cancel", help="Cancel scan")
+    cancel_parser.set_defaults(func=lambda _: print_title(cancel_parser))
+    cancel_subparsers = cancel_parser.add_subparsers(dest="tool")
+
+    # cancel group -> cancel scan
+    cancel_scans_parser = cancel_subparsers.add_parser("scans", aliases=["scan"], parents=[output_parser], help="Cancel a scan")
+    cancel_scans_parser.add_argument("scan_id", help="Scan ID")
+    cancel_scans_parser.set_defaults(func=lambda args: cancel_scan(args.scan_id))
+    
     # LIST group
-    list_parser = subparsers.add_parser("list", aliases=["ls"], help="List previous scans")
+    list_parser = subparsers.add_parser("list", aliases=["ls"], help="List scans, available scanners")
     list_parser.set_defaults(func=lambda _: print_title(list_parser))
     list_subparsers = list_parser.add_subparsers(help="List operations")
 
     # list group -> list scans
-    list_scans_parser = list_subparsers.add_parser("scans", aliases=["scan"], help="List scans")
+    list_scans_parser = list_subparsers.add_parser("scans", aliases=["scan"], parents=[output_parser], help="List scans")
     list_scans_parser.set_defaults(func=lambda _: list_scans())
+    
+    # list group -> list scanners
+    list_scanners_parser = list_subparsers.add_parser("scanners", aliases=["scanner"], parents=[output_parser], help="List scanners")
+    list_scanners_parser.set_defaults(func=lambda _: list_scanners())
 
     # GET group
-    get_parser = subparsers.add_parser("get", help="Get previous scan")
+    get_parser = subparsers.add_parser("get", help="Get scan, host or domain")
     get_parser.set_defaults(func=lambda _: print_title(get_parser))
     get_subparsers = get_parser.add_subparsers(help="Get operations")
 
     # get group -> get scan
-    get_scans_parser = get_subparsers.add_parser("scans", aliases=["scan"], help="Get scan")
+    get_scans_parser = get_subparsers.add_parser("scans", aliases=["scan"], parents=[output_parser], help="Get scan")
     get_scans_parser.add_argument("scan_id", help="Scan ID")
-    
-    get_scans_parser_group = get_scans_parser.add_mutually_exclusive_group()
-    get_scans_parser_group.add_argument("--summary", action="store_true", help="Show short summary only")
-    get_scans_parser_group.add_argument("--report", action="store_true", help="Show full report")
-    
-    get_scans_parser.set_defaults(func=lambda args: get_scan(args.scan_id, args.summary, args.report))
+    get_scans_parser.set_defaults(func=lambda args: get_scan(args.scan_id))
 
     # get group -> get host
-    get_hosts_parser = get_subparsers.add_parser("hosts", aliases=["host"], help="Get host")
+    get_hosts_parser = get_subparsers.add_parser("hosts", aliases=["host"], parents=[output_parser], help="Get host")
     get_hosts_parser.add_argument("address", help="Host IPv4 / IPv6 address")
     get_hosts_parser.set_defaults(func=lambda args: get_host(args.address))
 
     # get group -> get domain
-    get_domains_parser = get_subparsers.add_parser("domains", aliases=["domain"], help="Get domain")
+    get_domains_parser = get_subparsers.add_parser("domains", aliases=["domain"], parents=[output_parser], help="Get domain")
     get_domains_parser.add_argument("address", help="Domain address")
     get_domains_parser.set_defaults(func=lambda args: get_domain(args.address))
 
     args = parser.parse_args()
     
+    if hasattr(args, "output"):
+        global _output
+        if args.output == OutputType.HUMAN:
+            _output = HumanOutput()
+        elif args.output == OutputType.JSON:
+            _output = JsonOutput()
+        else:
+            raise NotImplementedError(f"Output `{args.output}` is not supported.")
+
     if args.action is not "login":
         api_key = get_api_key()
         
@@ -306,7 +319,6 @@ def main():
         print(e.message)
     except KeyboardInterrupt:
         print("👋 Gracefully exiting. Goodbye!")
-    print("")
 
 
 if __name__ == "__main__":

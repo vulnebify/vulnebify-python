@@ -1,6 +1,5 @@
 import requests
 import requests.adapters
-import requests.auth
 
 import uuid
 
@@ -112,7 +111,7 @@ class VulnebifyKey:
     def __init__(self, client: VulnebifyHttpClient):
         self.__client = client
 
-    def generate(self):
+    def generate(self) -> KeyResponse:
         with self.__client as client:
             response = client.post(f"/key")
 
@@ -137,18 +136,18 @@ class VulnebifyDomain:
         with self.__client as client:
             response = client.get(f"/domain/{domain}")
 
-            return response
+            return DomainResponse.model_validate_json(response)
 
 
 class VulnebifyHost:
     def __init__(self, client: VulnebifyHttpClient):
         self.__client = client
 
-    def get(self, host: str):
+    def get(self, ip_str: str):
         with self.__client as client:
-            response = client.get(f"/host/{host}")
+            response = client.get(f"/host/{ip_str}")
 
-            return response
+            return HostResponse.model_validate_json(response)
 
 
 class VulnebifyScan:
@@ -184,21 +183,20 @@ class VulnebifyScan:
 
             return ScanResponse.model_validate_json(response)
 
-    def summary(self, scan_id: str) -> ScanSummaryResponse:
-        with self.__client as client:
-            response = client.get(f"/scan/{scan_id}/summary")
-
-            return ScanSummaryResponse.model_validate_json(response)
-
-    def report(self, scan_id: str) -> ScanReportResponse:
-        with self.__client as client:
-            response = client.get(f"/scan/{scan_id}/report")
-
-            return ScanReportResponse.model_validate_json(response)
-
     def cancel(self, scan_id: str):
         with self.__client as client:
             client.post(f"/scan/{scan_id}/cancel")
+
+
+class VulnebifyScanner:
+    def __init__(self, client: VulnebifyHttpClient):
+        self.__client = client
+
+    def list(self) -> ScannerListResponse:
+        with self.__client as client:
+            response = client.get("/scanner")
+
+            return ScannerListResponse.model_validate_json(response)
 
 
 class Vulnebify:
@@ -214,3 +212,4 @@ class Vulnebify:
         self.key = VulnebifyKey(client)
         self.host = VulnebifyHost(client)
         self.scan = VulnebifyScan(client)
+        self.scanner = VulnebifyScanner(client)
