@@ -23,9 +23,16 @@ CHECKOUT_TIMEOUT_SEC = 3600
 
 
 def parse_scopes(args):
+    # From file
     if args.file:
         with open(args.file) as f:
             return [line.strip() for line in f if line.strip()]
+
+    # From stdin (pipe)
+    if not sys.stdin.isatty():
+        return [line.strip() for line in sys.stdin if line.strip()]
+
+    # From positional args
     return args.scopes or []
 
 
