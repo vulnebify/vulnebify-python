@@ -17,7 +17,7 @@ VULNEBIFY_API_KEY = "VULNEBIFY_API_KEY"
 VULNEBIFY_API_URL = "VULNEBIFY_API_URL"
 
 _vulnebify: Vulnebify | None = None
-_output: Output | None = None
+_output: Output = HumanOutput()
 
 CHECKOUT_TIMEOUT_SEC = 3600
 
@@ -47,13 +47,12 @@ def save_api_key(api_key: str):
     with open(CONFIG_PATH, "w") as f:
         json.dump({"api_key": api_key}, f)
 
-        # fmt: off
-        print("""⚠️  Use Vulnebify responsibly. Only scan systems you own or have explicit permission to test.
-Violation may lead to legal consequences. See terms and conditions: https://vulnebify.com/terms"""
-        )
-        print("")
-        print("✅ API key saved successfully!")
-        # fmt: on
+        message = """⚠️  Use Vulnebify responsibly. Only scan systems you own or have explicit permission to test.
+Violation may lead to legal consequences. See terms and conditions: https://vulnebify.com/terms
+
+✅ API key saved successfully!"""
+
+        _output.print_message(message)
 
 
 def input_api_key(api_key: str | None):
@@ -73,12 +72,10 @@ def login(api_key: str | None, api_url: str):
         vulnebify = Vulnebify(api_key, api_url)
 
         if vulnebify.key.active():
-            print("")
             save_api_key(api_key)
         else:
-            print(
-                "🛑 API key is not active. Run 'vulnebify login' again. Check --api-key argument, VULNEBIFY_API_KEY environment variable, or input value."
-            )
+            message = "🛑 API key is not active. Run 'vulnebify login' again. Check --api-key argument, VULNEBIFY_API_KEY environment variable, or input value."
+            raise VulnebifyError(message)
 
         return
 
@@ -90,36 +87,32 @@ def login(api_key: str | None, api_url: str):
         save_api_key(api_key)
         return
 
-    print("To retrieve your API key, visit the following URL in your browser:")
-    print("")
-    print(f"  🔗 https://vulnebify.com/checkout?api_key_hash={response.api_key_hash}")
-    print("")
-    print("Never share your API key. It grants full access to your Vulnebify account.")
+    message = f"""To retrieve your API key, visit the following URL in your browser:
+
+🔗 https://vulnebify.com/checkout?api_key_hash={response.api_key_hash}
+
+Never share your API key. It grants full access to your Vulnebify account.
+"""
+    _output.print_message(message)
 
     vulnebify = Vulnebify(response.api_key, api_url)
     retry = 0
     previous_output_lines = 0
 
     while not vulnebify.key.active() and retry <= CHECKOUT_TIMEOUT_SEC:
-
         if previous_output_lines > 0:
             sys.stdout.write(
                 "\033[F" * previous_output_lines + "\033[K" * previous_output_lines
             )
             sys.stdout.flush()
 
-        output_lines = [
-            f"🔄 Still waiting for checkout... ({CHECKOUT_TIMEOUT_SEC - retry}s remaining)"
-        ]
-        for line in output_lines:
-            print(line)
-
-        previous_output_lines = len(output_lines)
+        previous_output_lines = _output.print_checkout_progress(
+            CHECKOUT_TIMEOUT_SEC, retry
+        )
 
         retry += 1
         time.sleep(1)
 
-    print("")
     save_api_key(response.api_key)
 
 
@@ -130,22 +123,24 @@ def run_scan(
     wait: bool,
 ):
     if not scopes:
-        print("⚠️  You must provide at least one domain, IP, or CIDR to scan")
-        return
+        message = "⚠️  You must provide at least one domain, IP, or CIDR to scan"
+        raise VulnebifyError(message)
 
-    print(f"🚀 Initiating scan for: {', '.join(scopes)}")
+    _output.print_message(f"🚀 Initiating scan for: {', '.join(scopes)}")
 
     scan_id = _vulnebify.scan.run(scopes, ports, scanners)
-    print(f"🆔 Scan started with ID: {scan_id}\n")
-    print(f"You can check the details any time by running:")
-    print(f"vulnebify get scan {scan_id}")
-    print("")
-    print(f"🔗 Or by visiting the link: https://vulnebify.com/scan/{scan_id}")
+    message = f"""🆔 Scan started with ID: {scan_id}
+
+You can check the details any time by running:
+vulnebify get scan {scan_id}
+
+🔗 Or by visiting the link: https://vulnebify.com/scan/{scan_id}
+"""
+    _output.print_message(message)
 
     if not wait:
         return
 
-    print("")
     previous_output_lines = 0
     scan: ScanResponse = None
     while True:
@@ -157,7 +152,7 @@ def run_scan(
             )
             sys.stdout.flush()
 
-        previous_output_lines = _output.print_scan_run(scan)
+        previous_output_lines = _output.print_scan_progress(scan)
 
         if scan.status in [ScanStatus.FINISHED, ScanStatus.CANCELED]:
             break
@@ -192,7 +187,7 @@ def get_host(address: str):
 
 def get_domain(address: str):
     domain = _vulnebify.domain.get(address)
-    _output.print_host(domain)
+    _output.print_domain(domain)
 
 
 def print_title(parser: argparse.ArgumentParser):
@@ -203,19 +198,22 @@ __     __ _   _  _      _   _  _____  ____   ___  _____ __   __
  \ \ / / | | | || |    |  \| ||  _|  |  _ \  | | | |_    \ V / 
   \ V /  | |_| || |___ | |\  || |___ | |_) | | | |  _|    | |  
    \_/    \___/ |_____||_| \_||_____||____/ |___||_|      |_|            
+
+
+A cyber defense platform. See more: https://about.vulnebify.com/
 """
     )
-    print("")
-    print("A cyber defense platform. See more: https://about.vulnebify.com/")
-    print("")
     parser.print_help()
 
 
 def cli():
     # fmt: off
+    
+    # Shared
     output_parser = argparse.ArgumentParser(add_help=False)
     output_parser.add_argument("-o", "--output", type=OutputType, choices=["human", "json"], default=OutputType.HUMAN, help="Output format (default: human)")
     
+    # Core 
     parser = argparse.ArgumentParser(prog="vulnebify")
     parser.add_argument("-a", "--api-url", default="https://api.vulnebify.com/v1", help="API url (default: https://api.vulnebify.com/v1)")
     parser.set_defaults(func=lambda _: print_title(parser))
@@ -300,8 +298,7 @@ def cli():
         api_key = get_api_key()
         
         if not api_key:
-            print("⚠️  Please log in first using 'vulnebify login'")
-            return
+            raise VulnebifyError("⚠️  Please log in first using 'vulnebify login'")
         
         api_url = args.api_url or os.environ.get(VULNEBIFY_API_URL)
         
@@ -316,9 +313,11 @@ def main():
     try:
         cli()
     except VulnebifyError as e:
-        print(e.message)
+        _output.print_error(e)
     except KeyboardInterrupt:
-        print("👋 Gracefully exiting. Goodbye!")
+        _output.print_message("👋 Gracefully exiting. Goodbye!")
+    except Exception as e:
+        _output.print_unexpected_error(e)
 
 
 if __name__ == "__main__":

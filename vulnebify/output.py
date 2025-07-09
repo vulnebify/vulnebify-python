@@ -3,6 +3,7 @@ import json
 from abc import ABC, abstractmethod
 
 from .models import *
+from .errors import VulnebifyError, VulnebifyApiError
 
 
 class OutputType(str, Enum):
@@ -11,6 +12,14 @@ class OutputType(str, Enum):
 
 
 class Output(ABC):
+    @abstractmethod
+    def print_checkout_progress(self, timeout_sec: int, taken_sec: int) -> int:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def print_message(self, message: str):
+        raise NotImplementedError()
+
     @abstractmethod
     def print_host(self, host: HostResponse):
         raise NotImplementedError()
@@ -24,23 +33,42 @@ class Output(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_scanner_list(self, scanners: ScannerListResponse):
-        raise NotImplementedError()
-
-    @abstractmethod
     def print_scan(self, scan: ScanResponse):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_scan_run(self, scan: ScanResponse):
+    def print_scan_progress(self, scan: ScanResponse):
         raise NotImplementedError()
 
     @abstractmethod
     def print_scan_cancel(self, scan_id: str):
         raise NotImplementedError()
 
+    @abstractmethod
+    def print_scanner_list(self, scanners: ScannerListResponse):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def print_error(self, error: VulnebifyError):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def print_unexpected_error(self, error: Exception):
+        raise NotImplementedError()
+
 
 class HumanOutput(Output):
+    def print_checkout_progress(self, timeout_sec: int, taken_sec: int) -> int:
+        output_lines = [
+            f"🔄 Still waiting for checkout... ({timeout_sec - taken_sec}s remaining)"
+        ]
+        for line in output_lines:
+            print(line)
+        return len(output_lines)
+
+    def print_message(self, message: str):
+        print(message)
+
     def print_host(self, host: HostResponse):
         print(f"IP: {host.ip_str}")
 
@@ -81,7 +109,23 @@ class HumanOutput(Output):
                 print("")
 
     def print_domain(self, domain: DomainResponse):
-        raise NotImplementedError()
+        print(f"Domain: {domain.domain}")
+
+        if domain.dns:
+            print("")
+            records = ", ".join([f"{r.value} ({r.type.value})" for r in domain.dns])
+            print(f"DNS: {records}")
+
+        if domain.subdomains:
+            print("")
+            for subdomain in domain.subdomains:
+                records = ", ".join(
+                    [f"{r.value} ({r.type.value})" for r in subdomain.dns]
+                )
+                if records:
+                    print(f"{subdomain.domain}: {records}")
+                else:
+                    print(f"{subdomain.domain}")
 
     def print_scan_list(self, scans: ScanListResponse):
         print(f"=== Scans ({scans.total}) ===")
@@ -98,11 +142,6 @@ class HumanOutput(Output):
 
             started_at = scan.started_at.strftime("%Y-%m-%d %H:%M:%S")
             print(f"{scan.scan_id} - {started_at} - {scopes} - {scan.status.value}")
-
-    def print_scanner_list(self, scanners: ScannerListResponse):
-        print(f"=== Scanners ({scanners.total}) ===")
-        for scanner in scanners.items:
-            print(f"{scanner.id} - {scanner.description}")
 
     def print_scan(self, scan: ScanResponse):
         print(f"Scan ID: {scan.scan_id} ({scan.status.value})")
@@ -140,7 +179,7 @@ class HumanOutput(Output):
             for report in scan.reports:
                 print(f"Report ({report.type}): {report.slug}")
 
-    def print_scan_run(self, scan: ScanResponse) -> int:
+    def print_scan_progress(self, scan: ScanResponse) -> int:
         output_lines = [f"🔄 Scan status: {scan.status.value}"]
 
         if scan.progress.initiated_tasks:
@@ -171,8 +210,48 @@ class HumanOutput(Output):
     def print_scan_cancel(self, scan_id: str):
         print(f"✅ Scan {scan_id} successfully canceled!")
 
+    def print_scanner_list(self, scanners: ScannerListResponse):
+        print(f"=== Scanners ({scanners.total}) ===")
+        for scanner in scanners.items:
+            print(f"{scanner.id} - {scanner.description}")
+
+    def print_error(self, error: VulnebifyError):
+        message = error.message
+
+        if isinstance(error, VulnebifyApiError):
+            if "error" in error.response and "code" in error.response["error"]:
+                error_code = error.response["error"]["code"]
+                message += f" Code: {error_code}."
+            if "error" in error.response and "message" in error.response["error"]:
+                error_message = error.response["error"]["message"]
+                message += f" Message: {error_message}"
+
+        print(message)
+
+    def print_unexpected_error(self, error: Exception):
+        print("🛑 Oh no! Unexpected error:")
+        print(str(error))
+        print("Create issue: https://github.com/vulnebify/vulnebify-python/issues")
+
 
 class JsonOutput(Output):
+    def print_checkout_progress(self, _: int, taken_sec: int) -> int:
+        out = json.dumps(
+            {
+                "status": "running",
+                "progress": {
+                    "taken_sec": taken_sec,
+                },
+            },
+            indent=2,
+        )
+        print(out)
+        return len(out.splitlines())
+
+    def print_message(self, message: str):
+        out = json.dumps({"message": message}, indent=2, ensure_ascii=False)
+        print(out)
+
     def print_host(self, host: HostResponse):
         print(host.model_dump_json(indent=2))
 
@@ -182,14 +261,47 @@ class JsonOutput(Output):
     def print_scan_list(self, scans: ScanListResponse):
         print(scans.model_dump_json(indent=2))
 
-    def print_scanner_list(self, scanners: ScannerListResponse):
-        print(scanners.model_dump_json(indent=2))
-
     def print_scan(self, scan: ScanResponse):
         print(scan.model_dump_json(indent=2))
 
-    def print_scan_run(self, scan: ScanResponse):
-        raise NotImplementedError()
+    def print_scan_progress(self, scan: ScanResponse) -> int:
+        out = json.dumps(
+            {
+                "status": scan.status,
+                "progress": {
+                    "initiated_tasks": scan.progress.initiated_tasks,
+                    "completed_tasks": scan.progress.completed_tasks,
+                },
+            },
+            indent=2,
+        )
+        print(out)
+        return len(out.splitlines())
 
     def print_scan_cancel(self, scan_id: str):
-        print(json.dumps({"scan_id": scan_id, "status": ScanStatus.CANCELED.value}))
+        out = json.dumps(
+            {"scan_id": scan_id, "status": ScanStatus.CANCELED.value},
+            indent=2,
+        )
+        print(out)
+
+    def print_scanner_list(self, scanners: ScannerListResponse):
+        print(scanners.model_dump_json(indent=2))
+
+    def print_error(self, error: VulnebifyError):
+        obj = {"message": error.message}
+
+        if isinstance(error, VulnebifyApiError):
+            obj["status_code"] = error.status_code
+            obj["response"] = error.response
+
+        out = json.dumps(obj, indent=2, ensure_ascii=False)
+        print(out)
+
+    def print_unexpected_error(self, error: Exception):
+        message = f"Oh no! Unexpected error: {str(error)}"
+        suggestion = (
+            "Create issue: https://github.com/vulnebify/vulnebify-python/issues"
+        )
+        out = json.dumps({"message": message, "suggestion": suggestion}, indent=2)
+        print(out)
