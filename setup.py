@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setup(
     name="vulnebify",
     version="1.0.0",
-    packages=find_packages(),
+    packages=find_packages(exclude=["tests", "tests.*"]),
     install_requires=["requests==2.32.3", "pydantic==2.11.2"],
     entry_points={
         "console_scripts": [

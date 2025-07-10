@@ -111,11 +111,11 @@ class VulnebifyKey:
     def __init__(self, client: VulnebifyHttpClient):
         self.__client = client
 
-    def generate(self) -> KeyResponse:
+    def generate(self) -> GeneratedKey:
         with self.__client as client:
             response = client.post(f"/key")
 
-            return KeyResponse.model_validate_json(response)
+            return GeneratedKey.model_validate_json(response)
 
     def active(self) -> bool:
         with self.__client as client:
@@ -136,7 +136,7 @@ class VulnebifyDomain:
         with self.__client as client:
             response = client.get(f"/domain/{domain}")
 
-            return DomainResponse.model_validate_json(response)
+            return RootDomain.model_validate_json(response)
 
 
 class VulnebifyHost:
@@ -147,17 +147,17 @@ class VulnebifyHost:
         with self.__client as client:
             response = client.get(f"/host/{ip_str}")
 
-            return HostResponse.model_validate_json(response)
+            return Host.model_validate_json(response)
 
 
 class VulnebifyScan:
     def __init__(self, client: VulnebifyHttpClient):
         self.__client = client
 
-    def list(self) -> ScanListResponse:
+    def list(self) -> ScanList:
         with self.__client as client:
             response = client.get(f"/scan")
-            return ScanListResponse.model_validate_json(response)
+            return ScanList.model_validate_json(response)
 
     def run(
         self,
@@ -167,21 +167,17 @@ class VulnebifyScan:
         idempotency_key: str | None = None,
     ) -> str:
         with self.__client as client:
-            request = ScanRequest(
-                scopes=scopes,
-                ports=ports,
-                scanners=scanners,
-            ).model_dump()
+            request = {"scopes": scopes, "ports": ports, "scanners": scanners}
 
             response = client.post(f"/scan/", request, idempotency_key=idempotency_key)
 
-            return ScanRunResponse.model_validate_json(response).scan_id
+            return ScanRun.model_validate_json(response).scan_id
 
-    def get(self, scan_id: str) -> ScanResponse:
+    def get(self, scan_id: str) -> Scan:
         with self.__client as client:
             response = client.get(f"/scan/{scan_id}")
 
-            return ScanResponse.model_validate_json(response)
+            return Scan.model_validate_json(response)
 
     def cancel(self, scan_id: str):
         with self.__client as client:
@@ -192,11 +188,11 @@ class VulnebifyScanner:
     def __init__(self, client: VulnebifyHttpClient):
         self.__client = client
 
-    def list(self) -> ScannerListResponse:
+    def list(self) -> ScannerList:
         with self.__client as client:
             response = client.get("/scanner")
 
-            return ScannerListResponse.model_validate_json(response)
+            return ScannerList.model_validate_json(response)
 
 
 class Vulnebify:

@@ -9,18 +9,18 @@ from typing import List
 from datetime import datetime
 
 from .client import Vulnebify
-from .models import ScanResponse, ScanStatus
+from .models import Scan, ScanStatus
 from .errors import VulnebifyError
 from .output import OutputType, Output, HumanOutput, JsonOutput
 
 CONFIG_PATH = os.path.expanduser("~/.vulnebifyrc")
+
 VULNEBIFY_API_KEY = "VULNEBIFY_API_KEY"
 VULNEBIFY_API_URL = "VULNEBIFY_API_URL"
+CHECKOUT_TIMEOUT_SEC = 3600
 
 _vulnebify: Vulnebify | None = None
 _output: Output = HumanOutput()
-
-CHECKOUT_TIMEOUT_SEC = 3600
 
 
 def parse_scopes(args):
@@ -29,12 +29,15 @@ def parse_scopes(args):
         with open(args.file) as f:
             return [line.strip() for line in f if line.strip()]
 
+    # From positional args
+    if args.scopes:
+        return args.scopes
+
     # From stdin (pipe)
     if not sys.stdin.isatty():
         return [line.strip() for line in sys.stdin if line.strip()]
 
-    # From positional args
-    return args.scopes or []
+    return []
 
 
 def get_api_key():
@@ -83,15 +86,15 @@ def login(api_key: str | None, api_url: str):
 
     vulnebify = Vulnebify(None, api_url)  # None - without auth
 
-    response = vulnebify.key.generate()
+    generated_key = vulnebify.key.generate()
 
-    if response.active:
+    if generated_key.active:
         save_api_key(api_key)
         return
 
-    _output.print_checkout(response.api_key_hash)
+    _output.print_checkout(generated_key.api_key_hash)
 
-    vulnebify = Vulnebify(response.api_key, api_url)
+    vulnebify = Vulnebify(generated_key.api_key, api_url)
     retry = 0
 
     while not vulnebify.key.active() and retry <= CHECKOUT_TIMEOUT_SEC:
@@ -100,7 +103,7 @@ def login(api_key: str | None, api_url: str):
         retry += 1
         time.sleep(1)
 
-    save_api_key(response.api_key)
+    save_api_key(generated_key.api_key)
 
 
 def run_scan(
@@ -122,13 +125,13 @@ def run_scan(
     if not wait:
         return
 
-    scan: ScanResponse = None
-    last_seen = datetime.min
+    scan: Scan = None
+    last_inserted_at = datetime.min
 
     while True:
         scan = _vulnebify.scan.get(scan_id)
 
-        last_seen = _output.print_scan_progress(scan, last_seen)
+        last_inserted_at = _output.print_scan_progress(scan, last_inserted_at)
 
         if scan.status in [ScanStatus.FINISHED, ScanStatus.CANCELED]:
             break
@@ -280,7 +283,7 @@ def cli():
         
         global _vulnebify
         _vulnebify = Vulnebify(api_key, api_url)
-        
+    
     args.func(args)
     # fmt: on
 

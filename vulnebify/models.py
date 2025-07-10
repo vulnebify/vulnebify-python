@@ -6,7 +6,7 @@ from typing import Dict, List, Any
 from enum import Enum
 
 
-class KeyResponse(BaseModel):
+class GeneratedKey(BaseModel):
     api_key: str
     api_key_hash: str
 
@@ -33,30 +33,6 @@ class Fingerprints(BaseModel):
     sha256: str
     sha1: str
     md5: str
-
-
-class DnsRecordType(str, Enum):
-    A = "A"
-    AAAA = "AAAA"
-    CNAME = "CNAME"
-    MX = "MX"
-    TXT = "TXT"
-    SRV = "SRV"
-    NS = "NS"
-    PTR = "PTR"
-    SOA = "SOA"
-    SPF = "SPF"
-    DNSKEY = "DNSKEY"
-
-
-class DnsRecord(BaseModel):
-    type: DnsRecordType
-    value: str
-
-
-class Domain(BaseModel):
-    domain: str
-    dns: List[DnsRecord] = []
 
 
 class Label(str, Enum):
@@ -97,34 +73,28 @@ class Transport(str, Enum):
     UDP = "udp"
 
 
-class ScanRequest(BaseModel):
-    scopes: List[str]
-    ports: List[str | int] = []
-    scanners: List[str] = []
-
-
-class ScanRunResponse(BaseModel):
+class ScanRun(BaseModel):
     scan_id: str
 
 
-class ScanLogResponse(BaseModel):
+class ScanLog(BaseModel):
     type: ScanLogType
     entry: Any
 
     inserted_at: datetime
 
 
-class ScanProgressResponse(BaseModel):
+class ScanProgress(BaseModel):
     initiated_tasks: int = 0
     completed_tasks: int = 0
 
 
-class ScanReportResponse(BaseModel):
+class ScanReportRef(BaseModel):
     type: str
     slug: str
 
 
-class ScanResponse(BaseModel):
+class Scan(BaseModel):
     scan_id: str
     status: ScanStatus
 
@@ -135,19 +105,43 @@ class ScanResponse(BaseModel):
     ports: List[str | int] = []
     scanners: List[str] = []
 
-    progress: ScanProgressResponse
+    progress: ScanProgress
 
-    logs: List[ScanLogResponse]
-    reports: List[ScanReportResponse]
+    logs: List[ScanLog]
+    reports: List[ScanReportRef]
 
-    def hosts(last_seen: datetime | None = None) -> List[str]:
-        pass
+    def last_inserted_log_at(self) -> datetime:
+        if not self.logs:
+            return datetime.min
 
-    def domains(last_seen: datetime | None = None) -> List[str]:
-        pass
+        return self.logs[-1].inserted_at
+
+    def hosts(self, last_inserted_at: datetime = datetime.min) -> List[str]:
+        hosts = []
+
+        for log in self.logs:
+            if log.type != ScanLogType.HOST_SCANNED:
+                continue
+
+            if log.inserted_at > last_inserted_at:
+                hosts.append(log.entry)
+
+        return hosts
+
+    def domains(self, last_inserted_at: datetime = datetime.min) -> List[str]:
+        domains = []
+
+        for log in self.logs:
+            if log.type != ScanLogType.DOMAIN_SCANNED:
+                continue
+
+            if log.inserted_at > last_inserted_at:
+                domains.append(log.entry)
+
+        return domains
 
 
-class ScanListItemResponse(BaseModel):
+class ScanListItem(BaseModel):
     scan_id: str
 
     scopes: List[str]
@@ -158,20 +152,20 @@ class ScanListItemResponse(BaseModel):
     ended_at: datetime | None
 
 
-class ScanListResponse(BaseModel):
+class ScanList(BaseModel):
     total: int
-    items: List[ScanListItemResponse]
+    items: List[ScanListItem]
 
 
-class ScannerListItemResponse(BaseModel):
+class ScannerListItem(BaseModel):
     id: str
     description: str
     depends_on: List[str]
 
 
-class ScannerListResponse(BaseModel):
+class ScannerList(BaseModel):
     total: int
-    items: List[ScannerListItemResponse]
+    items: List[ScannerListItem]
 
 
 class Coordinates(BaseModel):
@@ -226,7 +220,7 @@ class Port(BaseModel):
     rtsp: Rtsp | None
 
 
-class HostResponse(BaseModel):
+class Host(BaseModel):
     ip_str: str
     ip_int: int
 
@@ -244,7 +238,31 @@ class HostResponse(BaseModel):
     ports: List[Port]
 
 
-class DomainResponse(BaseModel):
+class DnsRecordType(str, Enum):
+    A = "A"
+    AAAA = "AAAA"
+    CNAME = "CNAME"
+    MX = "MX"
+    TXT = "TXT"
+    SRV = "SRV"
+    NS = "NS"
+    PTR = "PTR"
+    SOA = "SOA"
+    SPF = "SPF"
+    DNSKEY = "DNSKEY"
+
+
+class DnsRecord(BaseModel):
+    type: DnsRecordType
+    value: str
+
+
+class Domain(BaseModel):
+    domain: str
+    dns: List[DnsRecord] = []
+
+
+class RootDomain(BaseModel):
     domain: str
 
     first_scanned_at: datetime | None = None

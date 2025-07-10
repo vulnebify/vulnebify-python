@@ -26,19 +26,19 @@ class Output(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_host(self, host: HostResponse):
+    def print_host(self, host: Host):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_domain(self, domain: DomainResponse):
+    def print_domain(self, domain: RootDomain):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_scan_list(self, scans: ScanListResponse):
+    def print_scan_list(self, scans: ScanList):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_scan(self, scan: ScanResponse):
+    def print_scan(self, scan: Scan):
         raise NotImplementedError()
 
     @abstractmethod
@@ -55,7 +55,7 @@ class Output(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_scan_progress(self, scan: ScanResponse, last_seen: datetime) -> datetime:
+    def print_scan_progress(self, scan: Scan, last_seen: datetime) -> datetime:
         raise NotImplementedError()
 
     @abstractmethod
@@ -63,7 +63,7 @@ class Output(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_scanner_list(self, scanners: ScannerListResponse):
+    def print_scanner_list(self, scanners: ScannerList):
         raise NotImplementedError()
 
     @abstractmethod
@@ -104,7 +104,7 @@ Violation may lead to legal consequences. See terms and conditions: https://vuln
 ✅ API key saved successfully!"""
         print(message)
 
-    def print_host(self, host: HostResponse):
+    def print_host(self, host: Host):
         print(f"IP: {host.ip_str}")
 
         if host.location or host.autonomous_system:
@@ -143,7 +143,7 @@ Violation may lead to legal consequences. See terms and conditions: https://vuln
                     print(f"    {line}")
                 print("")
 
-    def print_domain(self, domain: DomainResponse):
+    def print_domain(self, domain: RootDomain):
         print(f"Domain: {domain.domain}")
 
         if domain.dns:
@@ -162,7 +162,7 @@ Violation may lead to legal consequences. See terms and conditions: https://vuln
                 else:
                     print(f"{subdomain.domain}")
 
-    def print_scan_list(self, scans: ScanListResponse):
+    def print_scan_list(self, scans: ScanList):
         print(f"=== Scans ({scans.total}) ===")
 
         if not scans.items:
@@ -178,7 +178,7 @@ Violation may lead to legal consequences. See terms and conditions: https://vuln
             started_at = scan.started_at.strftime("%Y-%m-%d %H:%M:%S")
             print(f"{scan.scan_id} - {started_at} - {scopes} - {scan.status.value}")
 
-    def print_scan(self, scan: ScanResponse):
+    def print_scan(self, scan: Scan):
         print(f"Scan ID: {scan.scan_id} ({scan.status.value})")
         print("")
 
@@ -241,14 +241,14 @@ vulnebify get scan {scan_id}
 """
         print(message)
 
-    def print_scan_progress(self, scan: ScanResponse, last_seen: datetime) -> datetime:
+    def print_scan_progress(self, scan: Scan, last_inserted_at: datetime) -> datetime:
         output_lines = []
 
-        if scan.logs:
-            for log in scan.logs:
-                if log.inserted_at > last_seen:
-                    output_lines.append(f"Discovered open port(s) on {log.entry}")
-            last_seen = scan.logs[-1].inserted_at
+        output_lines += [
+            f"Discovered open port(s) on {host}"
+            for host in scan.hosts(last_inserted_at)
+        ]
+        last_inserted_at = scan.last_inserted_log_at()
 
         if scan.status == ScanStatus.QUEUED:
             output_lines = [f"🔄 Scan status: {scan.status.value}"]
@@ -272,12 +272,12 @@ vulnebify get scan {scan_id}
         for line in output_lines:
             print(line)
 
-        return last_seen
+        return last_inserted_at
 
     def print_scan_cancel(self, scan_id: str):
         print(f"✅ Scan {scan_id} successfully canceled!")
 
-    def print_scanner_list(self, scanners: ScannerListResponse):
+    def print_scanner_list(self, scanners: ScannerList):
         print(f"=== Scanners ({scanners.total}) ===")
         for scanner in scanners.items:
             print(f"{scanner.id} - {scanner.description}")
@@ -337,16 +337,16 @@ class JsonOutput(Output):
         )
         print(out)
 
-    def print_host(self, host: HostResponse):
+    def print_host(self, host: Host):
         print(host.model_dump_json(indent=2))
 
-    def print_domain(self, domain: DomainResponse):
+    def print_domain(self, domain: RootDomain):
         print(domain.model_dump_json(indent=2))
 
-    def print_scan_list(self, scans: ScanListResponse):
+    def print_scan_list(self, scans: ScanList):
         print(scans.model_dump_json(indent=2))
 
-    def print_scan(self, scan: ScanResponse):
+    def print_scan(self, scan: Scan):
         print(scan.model_dump_json(indent=2))
 
     def print_scan_initiating(
@@ -358,16 +358,23 @@ class JsonOutput(Output):
         pass
 
     def print_scan_initiated(self, scan_id: str):
-        pass
+        out = json.dumps(
+            {
+                "scan_id": scan_id,
+                "status": ScanStatus.QUEUED.value,
+                "hosts": [],
+                "progress": {
+                    "initiated_tasks": 0,
+                    "completed_tasks": 0,
+                },
+            },
+            indent=2,
+        )
+        print(out)
 
-    def print_scan_progress(self, scan: ScanResponse, last_seen: datetime) -> datetime:
-        hosts = []
-
-        if scan.logs:
-            for log in scan.logs:
-                if log.inserted_at > last_seen:
-                    hosts.append(log.entry)
-            last_seen = scan.logs[-1].inserted_at
+    def print_scan_progress(self, scan: Scan, last_inserted_at: datetime) -> datetime:
+        hosts = scan.hosts(last_inserted_at)
+        last_inserted_at = scan.last_inserted_log_at()
 
         out = json.dumps(
             {
@@ -382,7 +389,7 @@ class JsonOutput(Output):
             indent=2,
         )
         print(out)
-        return last_seen
+        return last_inserted_at
 
     def print_scan_cancel(self, scan_id: str):
         out = json.dumps(
@@ -391,7 +398,7 @@ class JsonOutput(Output):
         )
         print(out)
 
-    def print_scanner_list(self, scanners: ScannerListResponse):
+    def print_scanner_list(self, scanners: ScannerList):
         print(scanners.model_dump_json(indent=2))
 
     def print_error(self, error: VulnebifyError):
