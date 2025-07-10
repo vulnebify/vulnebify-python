@@ -111,6 +111,8 @@ class ScanLogResponse(BaseModel):
     type: ScanLogType
     entry: Any
 
+    inserted_at: datetime
+
 
 class ScanProgressResponse(BaseModel):
     initiated_tasks: int = 0
@@ -137,6 +139,12 @@ class ScanResponse(BaseModel):
 
     logs: List[ScanLogResponse]
     reports: List[ScanReportResponse]
+
+    def hosts(last_seen: datetime | None = None) -> List[str]:
+        pass
+
+    def domains(last_seen: datetime | None = None) -> List[str]:
+        pass
 
 
 class ScanListItemResponse(BaseModel):

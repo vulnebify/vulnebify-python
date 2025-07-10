@@ -6,6 +6,7 @@ import json
 import getpass
 
 from typing import List
+from datetime import datetime
 
 from .client import Vulnebify
 from .models import ScanResponse, ScanStatus
@@ -53,13 +54,7 @@ def get_api_key():
 def save_api_key(api_key: str):
     with open(CONFIG_PATH, "w") as f:
         json.dump({"api_key": api_key}, f)
-
-        message = """⚠️  Use Vulnebify responsibly. Only scan systems you own or have explicit permission to test.
-Violation may lead to legal consequences. See terms and conditions: https://vulnebify.com/terms
-
-✅ API key saved successfully!"""
-
-        _output.print_message(message)
+        _output.print_api_key_saved(api_key)
 
 
 def input_api_key(api_key: str | None):
@@ -94,28 +89,13 @@ def login(api_key: str | None, api_url: str):
         save_api_key(api_key)
         return
 
-    message = f"""To retrieve your API key, visit the following URL in your browser:
-
-🔗 https://vulnebify.com/checkout?api_key_hash={response.api_key_hash}
-
-Never share your API key. It grants full access to your Vulnebify account.
-"""
-    _output.print_message(message)
+    _output.print_checkout(response.api_key_hash)
 
     vulnebify = Vulnebify(response.api_key, api_url)
     retry = 0
-    previous_output_lines = 0
 
     while not vulnebify.key.active() and retry <= CHECKOUT_TIMEOUT_SEC:
-        if previous_output_lines > 0:
-            sys.stdout.write(
-                "\033[F" * previous_output_lines + "\033[K" * previous_output_lines
-            )
-            sys.stdout.flush()
-
-        previous_output_lines = _output.print_checkout_progress(
-            CHECKOUT_TIMEOUT_SEC, retry
-        )
+        _output.print_checkout_progress(CHECKOUT_TIMEOUT_SEC, retry)
 
         retry += 1
         time.sleep(1)
@@ -133,33 +113,22 @@ def run_scan(
         message = "⚠️  You must provide at least one domain, IP, or CIDR to scan"
         raise VulnebifyError(message)
 
-    _output.print_message(f"🚀 Initiating scan for: {', '.join(scopes)}")
+    _output.print_scan_initiating(scopes, ports, scanners)
 
     scan_id = _vulnebify.scan.run(scopes, ports, scanners)
-    message = f"""🆔 Scan started with ID: {scan_id}
 
-You can check the details any time by running:
-vulnebify get scan {scan_id}
-
-🔗 Or by visiting the link: https://vulnebify.com/scan/{scan_id}
-"""
-    _output.print_message(message)
+    _output.print_scan_initiated(scan_id)
 
     if not wait:
         return
 
-    previous_output_lines = 0
     scan: ScanResponse = None
+    last_seen = datetime.min
+
     while True:
         scan = _vulnebify.scan.get(scan_id)
 
-        if previous_output_lines > 0:
-            sys.stdout.write(
-                "\033[F" * previous_output_lines + "\033[K" * previous_output_lines
-            )
-            sys.stdout.flush()
-
-        previous_output_lines = _output.print_scan_progress(scan)
+        last_seen = _output.print_scan_progress(scan, last_seen)
 
         if scan.status in [ScanStatus.FINISHED, ScanStatus.CANCELED]:
             break
@@ -227,7 +196,7 @@ def cli():
     subparsers = parser.add_subparsers(dest="action")
     
     # LOGIN group
-    login_parser = subparsers.add_parser("login", help="Login to the API")
+    login_parser = subparsers.add_parser("login", parents=[output_parser], help="Login to the API")
     login_parser.add_argument("-k", "--api-key", help="API key for authentication. Prefer using the interactive prompt for security. Only use this flag in CI/CD or trusted environments. You can also set the VULNEBIFY_API_KEY environment variable.")
     login_parser.set_defaults(func=lambda args: login(args.api_key, args.api_url))
 
@@ -301,7 +270,7 @@ def cli():
         else:
             raise NotImplementedError(f"Output `{args.output}` is not supported.")
 
-    if args.action is not "login":
+    if args.action != "login":
         api_key = get_api_key()
         
         if not api_key:
@@ -322,7 +291,7 @@ def main():
     except VulnebifyError as e:
         _output.print_error(e)
     except KeyboardInterrupt:
-        _output.print_message("👋 Gracefully exiting. Goodbye!")
+        _output.print_exit()
     except Exception as e:
         _output.print_unexpected_error(e)
 

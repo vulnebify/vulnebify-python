@@ -1,4 +1,5 @@
 import json
+import sys
 
 from abc import ABC, abstractmethod
 
@@ -13,11 +14,15 @@ class OutputType(str, Enum):
 
 class Output(ABC):
     @abstractmethod
-    def print_checkout_progress(self, timeout_sec: int, taken_sec: int) -> int:
+    def print_checkout(self, api_key_hash: str):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_message(self, message: str):
+    def print_checkout_progress(self, timeout_sec: int, taken_sec: int):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def print_api_key_saved(self, api_key: str):
         raise NotImplementedError()
 
     @abstractmethod
@@ -37,7 +42,20 @@ class Output(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_scan_progress(self, scan: ScanResponse):
+    def print_scan_initiating(
+        self,
+        scopes: List[str],
+        ports: List[int | str],
+        scanners: List[str],
+    ):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def print_scan_initiated(self, scan_id: str):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def print_scan_progress(self, scan: ScanResponse, last_seen: datetime) -> datetime:
         raise NotImplementedError()
 
     @abstractmethod
@@ -56,17 +74,34 @@ class Output(ABC):
     def print_unexpected_error(self, error: Exception):
         raise NotImplementedError()
 
+    @abstractmethod
+    def print_exit(self):
+        raise NotImplementedError()
+
 
 class HumanOutput(Output):
-    def print_checkout_progress(self, timeout_sec: int, taken_sec: int) -> int:
-        output_lines = [
-            f"🔄 Still waiting for checkout... ({timeout_sec - taken_sec}s remaining)"
-        ]
-        for line in output_lines:
-            print(line)
-        return len(output_lines)
+    def print_checkout(self, api_key_hash: str):
+        message = f"""To retrieve your API key, visit the following URL in your browser:
 
-    def print_message(self, message: str):
+🔗 https://vulnebify.com/checkout?api_key_hash={api_key_hash}
+
+Never share your API key. It grants full access to your Vulnebify account.
+"""
+        print(message)
+
+    def print_checkout_progress(self, timeout_sec: int, taken_sec: int):
+        # Refresh status line (ending one)
+        sys.stdout.write("\033[F\033[K")
+
+        print(
+            f"🔄 Still waiting for checkout... ({timeout_sec - taken_sec}s remaining)"
+        )
+
+    def print_api_key_saved(self, api_key: str):
+        message = """⚠️  Use Vulnebify responsibly. Only scan systems you own or have explicit permission to test.
+Violation may lead to legal consequences. See terms and conditions: https://vulnebify.com/terms
+
+✅ API key saved successfully!"""
         print(message)
 
     def print_host(self, host: HostResponse):
@@ -179,10 +214,45 @@ class HumanOutput(Output):
             for report in scan.reports:
                 print(f"Report ({report.type}): {report.slug}")
 
-    def print_scan_progress(self, scan: ScanResponse) -> int:
-        output_lines = [f"🔄 Scan status: {scan.status.value}"]
+    def print_scan_initiating(
+        self,
+        scopes: List[str],
+        ports: List[int | str],
+        scanners: List[str],
+    ):
+        scopes = ",".join(scopes)
+        ports = ",".join(ports)
+        scanners = ",".join(scanners)
 
-        if scan.progress.initiated_tasks:
+        if scanners:
+            print(
+                f"🚀 Initiating scan for: {scopes} on {ports.upper()} port(s) with {scanners} scanner(s)"
+            )
+        else:
+            print(f"🚀 Initiating scan for: {scopes} on {ports.upper()} port(s)")
+
+    def print_scan_initiated(self, scan_id: str):
+        message = f"""🆔 Scan started with ID: {scan_id}
+
+You can check the details any time by running:
+vulnebify get scan {scan_id}
+
+🔗 Or by visiting the link: https://vulnebify.com/scan/{scan_id}
+"""
+        print(message)
+
+    def print_scan_progress(self, scan: ScanResponse, last_seen: datetime) -> datetime:
+        output_lines = []
+
+        if scan.logs:
+            for log in scan.logs:
+                if log.inserted_at > last_seen:
+                    output_lines.append(f"Discovered open port(s) on {log.entry}")
+            last_seen = scan.logs[-1].inserted_at
+
+        if scan.status == ScanStatus.QUEUED:
+            output_lines = [f"🔄 Scan status: {scan.status.value}"]
+        if scan.status == ScanStatus.RUNNING:
             initiated = scan.progress.initiated_tasks
             completed = scan.progress.completed_tasks
             progress_pct = (completed / initiated) * 100
@@ -190,22 +260,19 @@ class HumanOutput(Output):
 
             message = f" Progress: {initiated}/{completed} task(s) -> {formatted_progress_pct}%"
 
-            output_lines[0] += message
-
-        if scan.logs:
-            pass
-
-        if scan.status == ScanStatus.QUEUED:
-            output_lines = [f"🔄 Scan status: {scan.status.value}"]
+            output_lines.append(f"🔄 Scan status: {scan.status.value} + {message}")
         if scan.status == ScanStatus.FINISHED:
-            output_lines = [f"✅ Scan status: {scan.status.value}"]
+            output_lines.append(f"✅ Scan status: {scan.status.value}")
         if scan.status == ScanStatus.CANCELED:
-            output_lines = [f"🛑 Scan status: {scan.status.value}"]
+            output_lines.append(f"🛑 Scan status: {scan.status.value}")
+
+        # Refresh status line (ending one)
+        sys.stdout.write("\033[F\033[K")
 
         for line in output_lines:
             print(line)
 
-        return len(output_lines)
+        return last_seen
 
     def print_scan_cancel(self, scan_id: str):
         print(f"✅ Scan {scan_id} successfully canceled!")
@@ -233,9 +300,21 @@ class HumanOutput(Output):
         print(str(error))
         print("Create issue: https://github.com/vulnebify/vulnebify-python/issues")
 
+    def print_exit(self):
+        print("👋 Gracefully exiting. Goodbye!")
+
 
 class JsonOutput(Output):
-    def print_checkout_progress(self, _: int, taken_sec: int) -> int:
+    def print_checkout(self, api_key_hash: str):
+        out = json.dumps(
+            {
+                "checkout_url": f"https://vulnebify.com/checkout?api_key_hash={api_key_hash}",
+            },
+            indent=2,
+        )
+        print(out)
+
+    def print_checkout_progress(self, _: int, taken_sec: int):
         out = json.dumps(
             {
                 "status": "running",
@@ -246,10 +325,16 @@ class JsonOutput(Output):
             indent=2,
         )
         print(out)
-        return len(out.splitlines())
 
-    def print_message(self, message: str):
-        out = json.dumps({"message": message}, indent=2, ensure_ascii=False)
+    def print_api_key_saved(self, api_key: str):
+        out = json.dumps(
+            {
+                "api_key_last4": api_key[:4] + "*" * (len(api_key) - 8) + api_key[-4:],
+                "caution": "⚠️  Use Vulnebify responsibly. Only scan systems you own or have explicit permission to test. Violation may lead to legal consequences.",
+                "terms": "https://vulnebify.com/terms",
+            },
+            ensure_ascii=False,
+        )
         print(out)
 
     def print_host(self, host: HostResponse):
@@ -264,10 +349,31 @@ class JsonOutput(Output):
     def print_scan(self, scan: ScanResponse):
         print(scan.model_dump_json(indent=2))
 
-    def print_scan_progress(self, scan: ScanResponse) -> int:
+    def print_scan_initiating(
+        self,
+        scopes: List[str],
+        ports: List[int | str],
+        scanners: List[str],
+    ):
+        pass
+
+    def print_scan_initiated(self, scan_id: str):
+        pass
+
+    def print_scan_progress(self, scan: ScanResponse, last_seen: datetime) -> datetime:
+        hosts = []
+
+        if scan.logs:
+            for log in scan.logs:
+                if log.inserted_at > last_seen:
+                    hosts.append(log.entry)
+            last_seen = scan.logs[-1].inserted_at
+
         out = json.dumps(
             {
+                "scan_id": scan.scan_id,
                 "status": scan.status,
+                "hosts": hosts,
                 "progress": {
                     "initiated_tasks": scan.progress.initiated_tasks,
                     "completed_tasks": scan.progress.completed_tasks,
@@ -276,7 +382,7 @@ class JsonOutput(Output):
             indent=2,
         )
         print(out)
-        return len(out.splitlines())
+        return last_seen
 
     def print_scan_cancel(self, scan_id: str):
         out = json.dumps(
@@ -289,7 +395,7 @@ class JsonOutput(Output):
         print(scanners.model_dump_json(indent=2))
 
     def print_error(self, error: VulnebifyError):
-        obj = {"message": error.message}
+        obj = {"error": error.message}
 
         if isinstance(error, VulnebifyApiError):
             obj["status_code"] = error.status_code
@@ -303,5 +409,11 @@ class JsonOutput(Output):
         suggestion = (
             "Create issue: https://github.com/vulnebify/vulnebify-python/issues"
         )
-        out = json.dumps({"message": message, "suggestion": suggestion}, indent=2)
+        out = json.dumps({"error": message, "suggestion": suggestion}, indent=2)
+        print(out)
+
+    def print_exit(self):
+        out = json.dumps(
+            {"bye": "👋 Gracefully exiting. Goodbye!"}, indent=2, ensure_ascii=False
+        )
         print(out)
