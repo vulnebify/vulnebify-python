@@ -264,7 +264,7 @@ vulnebify get scan {scan_id}
             hosts = scan.hosts()
             duration = (scan.ended_at - scan.started_at).total_seconds()
 
-            message = f"✅ Scan finished! Discovered: {len(hosts)} host(s) during {duration} second(s)"
+            message = f"✅ Scan finished! Discovered: {len(hosts)} host(s) during {int(duration)} second(s)"
 
             output_lines.append(message)
         if scan.status == ScanStatus.CANCELED:
