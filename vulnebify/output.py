@@ -244,27 +244,31 @@ vulnebify get scan {scan_id}
     def print_scan_progress(self, scan: Scan, last_inserted_at: datetime) -> datetime:
         output_lines = []
 
-        output_lines += [
-            f"Discovered open port(s) on {host}"
-            for host in scan.hosts(last_inserted_at)
-        ]
-        last_inserted_at = scan.last_inserted_log_at()
-
         if scan.status == ScanStatus.QUEUED:
             output_lines = [f"🔄 Scan status: {scan.status.value}"]
         if scan.status == ScanStatus.RUNNING:
+            hosts = scan.hosts(last_inserted_at)
+            last_inserted_at = scan.last_inserted_log_at()
+
+            output_lines += [f"Discovered open port(s) on {host}" for host in hosts]
+
             initiated = scan.progress.initiated_tasks
             completed = scan.progress.completed_tasks
             progress_pct = (completed / initiated) * 100
             formatted_progress_pct = f"{progress_pct:.2f}"
 
-            message = f" Progress: {initiated}/{completed} task(s) -> {formatted_progress_pct}%"
+            message = f"🔄 Scan running...Progress: {initiated}/{completed} task(s) -> {formatted_progress_pct}%"
 
-            output_lines.append(f"🔄 Scan status: {scan.status.value} + {message}")
+            output_lines.append(message)
         if scan.status == ScanStatus.FINISHED:
-            output_lines.append(f"✅ Scan status: {scan.status.value}")
+            hosts = scan.hosts()
+            duration = (scan.ended_at - scan.started_at).total_seconds()
+
+            message = f"✅ Scan finished! Discovered: {len(hosts)} host(s) during {duration} second(s)"
+
+            output_lines.append(message)
         if scan.status == ScanStatus.CANCELED:
-            output_lines.append(f"🛑 Scan status: {scan.status.value}")
+            output_lines.append(f"🛑 Scan canceled.")
 
         # Refresh status line (ending one)
         sys.stdout.write("\033[F\033[K")
