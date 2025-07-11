@@ -190,9 +190,9 @@ Violation may lead to legal consequences. See terms and conditions: https://vuln
         else:
             print(f"Duration: {started_at} - running")
 
-        scopes = ",".join(scan.scopes)
-        ports = ",".join(scan.ports)
-        scanners = ",".join(scan.scanners)
+        scopes = ", ".join(scan.scopes)
+        ports = ", ".join(scan.ports)
+        scanners = ", ".join(scan.scanners)
 
         if scanners:
             print(
@@ -220,9 +220,9 @@ Violation may lead to legal consequences. See terms and conditions: https://vuln
         ports: List[int | str],
         scanners: List[str],
     ):
-        scopes = ",".join(scopes)
-        ports = ",".join(ports)
-        scanners = ",".join(scanners)
+        scopes = ", ".join(scopes)
+        ports = ", ".join(ports)
+        scanners = ", ".join(scanners)
 
         if scanners:
             print(

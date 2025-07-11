@@ -76,7 +76,7 @@ def test_run_scan_ip_with_wait():
     )
     assert result.returncode == 0
     assert "Discovered open port(s) on 1.1.1.1"
-    assert "✅ Scan status: finished" in result.stdout
+    assert "✅ Scan finished! Discovered: 1 host(s)" in result.stdout
 
 
 def test_run_scan_ip_from_stdin():
