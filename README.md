@@ -2,82 +2,104 @@
 
 ⚡️ A powerful, cross-platform command-line tool for interacting with the Vulnebify API — perform security scans, inspect hosts and domains, and retrieve results with real-time updates and machine-friendly output formats.
 
-## 🔧 Installation
+## Quick start
 
-Install via pip:
+### Install
 
 ```bash
 pip install vulnebify
 ```
 
-## 🚀 Usage
-
-### 🔐 Login
-
+### Run a scan
 ```bash
-vulnebify login
-# OR
-vulnebify login --api-key key_XXXXX
-# OR
-export VULNEBIFY_API_KEY=key_XXXXX
+vulnebify run scan 45.33.32.156
 ```
 
-### 🔍 Run a scan
+### Explore scan result
 
+via CLI
 ```bash
-vulnebify run scan vulnebify.com -p 80 443
-vulnebify run scan 1.1.1.1 vulnebify.com 193.176.180.0/22 -p 8000-9000
-vulnebify run scan -f ips.txt -p top100 -s rtsp
+vulnebify get scan SCAN_ID
 ```
 
-Add `--wait` to block until the scan finishes:
-
+via UI
 ```bash
-vulnebify run scan vulnebify.com --wait
+https://vulnebify.com/scan/SCAN_ID
 ```
 
-Piping support:
+## Installation
+
+### Install from PyPI
 
 ```bash
-echo 193.176.180.0/22 | vulnebify run scan -p 80 554 --wait -o json | jq .hosts[]
+pip install vulnebify
 ```
 
-### 📥 Get results
+### Intall from GitHub
 
 ```bash
-vulnebify get scan s_061a2fb6ade31d8e8sf82b5e36290a51
-vulnebify get host 1.1.1.1
-vulnebify get domain vulnebify.com
+git clone https://github.com/vulnebify/vulnebify-python.git && cd vulnebify-python && python3 -m venv .venv && source .venv/bin/activate && pip install .
 ```
 
-### 📃 List resources
+## Commands
 
+### `login`
+
+| Command                             | Description                                                                                                                                                                                     |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vulnebify login`                   | Login to the Vulnebify API.                                                                                                                                                                               |
+| `vulnebify login --api-key API_KEY` | API key for authentication. Prefer using the interactive prompt for security. Only use this flag in CI/CD or trusted environments. You can also set the VULNEBIFY_API_KEY environment variable. |
+
+The Stored at `~/.vulnebifyrc` after successful login.
+
+### `run scan`
+
+| Command                                                                       | Description                                                                                                         |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `vulnebify run scan 45.33.32.156`                                             | Run scan for a IP scanning scope.                                                                                   |
+| `vulnebify run scan 45.33.32.156 --output json`                               | Run scan for a IP scanning scope with `json` output. Default: `human`.                                              |
+| `vulnebify run scan 45.33.32.156  --wait`                                     | Run scan for a IP scanning scope and block until the scan finishes.                                                 |
+| `vulnebify run scan vulnebify.com --ports TOP1000`                            | Run scan for a IP scanning scope to check `TOP1000` ports. Default: `TOP100`. Alias: `-p`.                          |
+| `vulnebify run scan vulnebify.com --scanners subdomain`                       | Run scan for a domain scanning scope and enumerate subdomains with `subdomain` scanner. Alias: `-s`.                |
+| `vulnebify run scan 193.176.180.0/22 -p 554 --scanners rtsp`                  | Run scan for a CIDR scanning scope to check a single `554` port with detailed checks for RTSP using `rtsp` scanner. |
+| `vulnebify run scan 45.33.32.156 vulnebify.com 193.176.180.0/22 -p 8000-9000` | Run scan for multiple scanning scopes to check `8000-9000` port range.                                              |
+
+Piping is supported as well 🚀:
 ```bash
-vulnebify list scans
-vulnebify list scanners
+echo 193.176.180.0/22 | vulnebify run scan -p 80 443 --wait -o json | jq .hosts[]
 ```
 
-## 📁 Configuration
+### `get scan|host|domain`
 
-Stored at `~/.vulnebifyrc` after successful login.
+| Command                                                 | Description                                                       |
+| ------------------------------------------------------- | ----------------------------------------------------------------- |
+| `vulnebify get scan s_061a2fb6ade31d8e8sf82b5e36290a51` | Get previously executed scan.                                     |
+| `vulnebify get host 45.33.32.156 --output json`         | Get previously scanned host with `json` output. Default: `human`. |
+| `vulnebify get domain vulnebify.com`                    | Get previously scanned domain.                                    |
 
-## 🧪 Testing
+### `ls scan|scanners`
+
+| Command                              | Description                     |
+| ------------------------------------ | ------------------------------- |
+| `vulnebify list scans`               | List previously executed scans. |
+| `vulnebify list scanners`            | List available scanners.        |
+| `vulnebify get domain vulnebify.com` | Get previously scanned domain   |
+
+### `cancel scan`
+
+| Command                                                    | Description          |
+| ---------------------------------------------------------- | -------------------- |
+| `vulnebify cancel scan s_061a2fb6ade31d8e8sf82b5e36290a51` | Cancels running scan |
+
+## Testing
 
 ```bash
 pytest tests/
 ```
 
-## 📦 Packaging
-
-```bash
-python -m build
-```
-
-## 📚 Learn more
+## Learn more
 
 - [About Vulnebify](https://about.vulnebify.com)
 - [API documentation](https://docs.vulnebify.com)
 
 ---
-
-© 2025 Vulnebify. All rights reserved.
