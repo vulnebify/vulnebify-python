@@ -2,9 +2,11 @@
 
 ⚡️ A fast, portable CLI for security engineers — scan assets, explore results, and integrate Vulnebify API into your workflows with real-time and structured output.
 
-[![asciicast](https://asciinema.org/a/727288.svg)](https://asciinema.org/a/727288)
+🔹[Profile entire country within minutes](https://asciinema.org/a/727291)
+🔹[Scan 65k ports in 7 seconds](https://asciinema.org/a/727292)
+🔹[Enumarate subdomains and discovery open ports](https://asciinema.org/a/727289)
 
-🔹[Scan entire country within minutes](https://asciinema.org/a/727291)🔹[Scan 65k ports in 7 seconds](https://asciinema.org/a/727292)🔹[Enumarate subdomains and discovery open ports](https://asciinema.org/a/727289)
+[![asciicast](https://asciinema.org/a/727288.svg)](https://asciinema.org/a/727288)
 
 ## Quick start
 
