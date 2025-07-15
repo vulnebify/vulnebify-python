@@ -1,6 +1,6 @@
 # Vulnebify CLI
 
-⚡️ A powerful, cross-platform command-line tool for interacting with the Vulnebify API — perform security scans, inspect hosts and domains, and retrieve results with real-time updates and machine-friendly output formats.
+⚡️ A fast, portable CLI for security engineers — scan assets, explore results, and integrate Vulnebify into your workflows with real-time and structured output.
 
 ## Quick start
 
@@ -10,12 +10,18 @@
 pip install vulnebify
 ```
 
+### Login
+
+```bash
+vulnebify login
+```
+
 ### Run a scan
 ```bash
 vulnebify run scan 45.33.32.156
 ```
 
-### Explore scan result
+### View results
 
 via CLI
 ```bash
@@ -29,13 +35,13 @@ https://vulnebify.com/scan/SCAN_ID
 
 ## Installation
 
-### Install from PyPI
+### From PyPI
 
 ```bash
 pip install vulnebify
 ```
 
-### Intall from GitHub
+### From GitHub
 
 ```bash
 git clone https://github.com/vulnebify/vulnebify-python.git && cd vulnebify-python && python3 -m venv .venv && source .venv/bin/activate && pip install .
@@ -50,7 +56,7 @@ git clone https://github.com/vulnebify/vulnebify-python.git && cd vulnebify-pyth
 | `vulnebify login`                   | Login to the Vulnebify API.                                                                                                                                                                               |
 | `vulnebify login --api-key API_KEY` | API key for authentication. Prefer using the interactive prompt for security. Only use this flag in CI/CD or trusted environments. You can also set the VULNEBIFY_API_KEY environment variable. |
 
-The API key will be stored at `~/.vulnebifyrc` after successful login.
+✅ The API key will be stored at `~/.vulnebifyrc` after successful login.
 
 ### `run scan`
 
@@ -64,7 +70,7 @@ The API key will be stored at `~/.vulnebifyrc` after successful login.
 | `vulnebify run scan 193.176.180.0/22 -p 554 --scanners rtsp`                  | Run scan for a CIDR scanning scope to check a single `554` port with detailed checks for RTSP using `rtsp` scanner. |
 | `vulnebify run scan 45.33.32.156 vulnebify.com 193.176.180.0/22 -p 8000-9000` | Run scan for multiple scanning scopes to check `8000-9000` port range.                                              |
 
-Piping is supported as well 🚀:
+📥 Piping is supported too:
 ```bash
 echo 193.176.180.0/22 | vulnebify run scan -p 80 443 --wait -o json | jq .hosts[]
 ```
@@ -90,12 +96,6 @@ echo 193.176.180.0/22 | vulnebify run scan -p 80 443 --wait -o json | jq .hosts[
 | Command                                                    | Description          |
 | ---------------------------------------------------------- | -------------------- |
 | `vulnebify cancel scan s_061a2fb6ade31d8e8sf82b5e36290a51` | Cancels running scan |
-
-## Testing
-
-```bash
-pytest tests/
-```
 
 ## Learn more
 
