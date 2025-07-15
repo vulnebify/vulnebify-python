@@ -1,6 +1,6 @@
 # Vulnebify CLI
 
-⚡️ A fast, portable CLI for security engineers — scan assets, explore results, and integrate Vulnebify API into your workflows with real-time and structured output.
+⚡️ A fast, portable CLI to scan assets, view results, and integrate the Vulnebify API into your workflows with real-time, structured output.
 
 🔹[Profile entire country within minutes](https://asciinema.org/a/727291)
 
