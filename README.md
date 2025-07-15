@@ -89,7 +89,6 @@ echo 193.176.180.0/22 | vulnebify run scan -p 80 443 --wait -o json | jq .hosts[
 | ------------------------------------------------------- | ----------------------------------------------------------------- |
 | `vulnebify get scan s_061a2fb6ade31d8e8sf82b5e36290a51` | Get previously executed scan.                                     |
 | `vulnebify get host 45.33.32.156 --output json`         | Get previously scanned host with `json` output. Default: `human`. |
-| `vulnebify get domain vulnebify.com`                    | Get previously scanned domain.                                    |
 
 ### `ls scan|scanners`
 
