@@ -10,6 +10,8 @@
 
 [![asciicast](https://asciinema.org/a/727288.svg)](https://asciinema.org/a/727288)
 
+**Vulnebify conducts safe, non-intrusive scans focused strictly on public metadata, following a transparent and ethical approach that respects system boundaries and privacy.**
+
 ## Quick start
 
 ### Install
