@@ -50,7 +50,7 @@ git clone https://github.com/vulnebify/vulnebify-python.git && cd vulnebify-pyth
 | `vulnebify login`                   | Login to the Vulnebify API.                                                                                                                                                                               |
 | `vulnebify login --api-key API_KEY` | API key for authentication. Prefer using the interactive prompt for security. Only use this flag in CI/CD or trusted environments. You can also set the VULNEBIFY_API_KEY environment variable. |
 
-The Stored at `~/.vulnebifyrc` after successful login.
+The API key will be stored at `~/.vulnebifyrc` after successful login.
 
 ### `run scan`
 
