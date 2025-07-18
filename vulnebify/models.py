@@ -77,16 +77,15 @@ class ScanRun(BaseModel):
     scan_id: str
 
 
-class ScanLog(BaseModel):
-    type: ScanLogType
-    entry: Any
-
-    inserted_at: datetime
-
-
 class ScanProgress(BaseModel):
     initiated_tasks: int = 0
     completed_tasks: int = 0
+
+
+class ScanHostRef(BaseModel):
+    ip_str: str
+
+    inserted_at: datetime
 
 
 class ScanReportRef(BaseModel):
@@ -107,38 +106,23 @@ class Scan(BaseModel):
 
     progress: ScanProgress
 
-    logs: List[ScanLog]
+    hosts: List[ScanHostRef]
     reports: List[ScanReportRef]
 
-    def last_inserted_log_at(self) -> datetime:
-        if not self.logs:
+    def last_scanned_at(self) -> datetime:
+        if not self.hosts:
             return datetime.min
 
-        return self.logs[-1].inserted_at
+        return self.hosts[-1].inserted_at
 
-    def hosts(self, last_inserted_at: datetime = datetime.min) -> List[str]:
-        hosts = []
+    def last_scanned_ips(self, last_scanned_at: datetime = datetime.min) -> List[str]:
+        ips = []
 
-        for log in self.logs:
-            if log.type != ScanLogType.HOST_SCANNED:
-                continue
+        for host in self.hosts:
+            if host.inserted_at > last_scanned_at:
+                ips.append(host.ip_str)
 
-            if log.inserted_at > last_inserted_at:
-                hosts.append(log.entry)
-
-        return hosts
-
-    def domains(self, last_inserted_at: datetime = datetime.min) -> List[str]:
-        domains = []
-
-        for log in self.logs:
-            if log.type != ScanLogType.DOMAIN_SCANNED:
-                continue
-
-            if log.inserted_at > last_inserted_at:
-                domains.append(log.entry)
-
-        return domains
+        return ips
 
 
 class ScanListItem(BaseModel):
@@ -209,7 +193,7 @@ class Rtsp(BaseModel):
     resources: List[RtspResource]
 
 
-class Port(BaseModel):
+class Service(BaseModel):
     port: int
     banner: str | None
     protocol: Protocol | None
@@ -235,7 +219,7 @@ class Host(BaseModel):
 
     labels: List[Label]
 
-    ports: List[Port]
+    services: List[Service]
 
 
 class DnsRecordType(str, Enum):

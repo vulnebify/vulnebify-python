@@ -131,10 +131,10 @@ Violation may lead to legal consequences. See terms and conditions: https://vuln
             cves = ", ".join(host.cves)
             print(f"CVEs: {cves}")
 
-        if host.ports:
+        if host.services:
             print("")
             print(f"=== Ports ===")
-            for port in host.ports:
+            for port in host.services:
                 print(
                     f"{port.protocol.value.upper()} {port.port}/{port.transport.value.upper()}"
                 )
@@ -241,16 +241,16 @@ vulnebify get scan {scan_id}
 """
         print(message)
 
-    def print_scan_progress(self, scan: Scan, last_inserted_at: datetime) -> datetime:
+    def print_scan_progress(self, scan: Scan, last_scanned_at: datetime) -> datetime:
         output_lines = []
 
         if scan.status == ScanStatus.QUEUED:
             output_lines = [f"🔄 Scan status: {scan.status.value}"]
         if scan.status == ScanStatus.RUNNING:
-            hosts = scan.hosts(last_inserted_at)
-            last_inserted_at = scan.last_inserted_log_at()
+            ips = scan.last_scanned_ips(last_scanned_at)
+            last_scanned_at = scan.last_scanned_at()
 
-            output_lines += [f"Discovered open port(s) on {host}" for host in hosts]
+            output_lines += [f"Discovered open port(s) on {ip}" for ip in ips]
 
             initiated = scan.progress.initiated_tasks
             completed = scan.progress.completed_tasks
@@ -261,10 +261,10 @@ vulnebify get scan {scan_id}
 
             output_lines.append(message)
         if scan.status == ScanStatus.FINISHED:
-            hosts = scan.hosts()
+            ips = scan.last_scanned_ips()
             duration = (scan.ended_at - scan.started_at).total_seconds()
 
-            message = f"✅ Scan finished! Discovered: {len(hosts)} host(s) during {int(duration)} second(s)"
+            message = f"✅ Scan finished! Processed: {len(ips)} host(s) during {int(duration)} second(s)"
 
             output_lines.append(message)
         if scan.status == ScanStatus.CANCELED:
@@ -276,7 +276,7 @@ vulnebify get scan {scan_id}
         for line in output_lines:
             print(line)
 
-        return last_inserted_at
+        return last_scanned_at
 
     def print_scan_cancel(self, scan_id: str):
         print(f"✅ Scan {scan_id} successfully canceled!")
@@ -376,15 +376,15 @@ class JsonOutput(Output):
         )
         print(out)
 
-    def print_scan_progress(self, scan: Scan, last_inserted_at: datetime) -> datetime:
-        hosts = scan.hosts(last_inserted_at)
-        last_inserted_at = scan.last_inserted_log_at()
+    def print_scan_progress(self, scan: Scan, last_scanned_at: datetime) -> datetime:
+        ips = scan.last_scanned_ips(last_scanned_at)
+        last_scanned_at = scan.last_scanned_at()
 
         out = json.dumps(
             {
                 "scan_id": scan.scan_id,
                 "status": scan.status,
-                "hosts": hosts,
+                "hosts": ips,
                 "progress": {
                     "initiated_tasks": scan.progress.initiated_tasks,
                     "completed_tasks": scan.progress.completed_tasks,
@@ -393,7 +393,7 @@ class JsonOutput(Output):
             indent=2,
         )
         print(out)
-        return last_inserted_at
+        return last_scanned_at
 
     def print_scan_cancel(self, scan_id: str):
         out = json.dumps(

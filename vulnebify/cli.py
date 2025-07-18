@@ -76,7 +76,7 @@ def login(api_key: str | None, api_url: str):
     if api_key:
         vulnebify = Vulnebify(api_key, api_url)
 
-        if vulnebify.key.active():
+        if vulnebify.key.is_activated():
             save_api_key(api_key)
         else:
             message = "🛑 API key is not active. Run 'vulnebify login' again. Check --api-key argument, VULNEBIFY_API_KEY environment variable, or input value."
@@ -97,7 +97,7 @@ def login(api_key: str | None, api_url: str):
     vulnebify = Vulnebify(generated_key.api_key, api_url)
     retry = 0
 
-    while not vulnebify.key.active() and retry <= CHECKOUT_TIMEOUT_SEC:
+    while not vulnebify.key.is_activated() and retry <= CHECKOUT_TIMEOUT_SEC:
         _output.print_checkout_progress(CHECKOUT_TIMEOUT_SEC, retry)
 
         retry += 1
@@ -126,12 +126,12 @@ def run_scan(
         return
 
     scan: Scan = None
-    last_inserted_at = datetime.min
+    last_scanned_at = datetime.min
 
     while True:
         scan = _vulnebify.scan.get(scan_id)
 
-        last_inserted_at = _output.print_scan_progress(scan, last_inserted_at)
+        last_scanned_at = _output.print_scan_progress(scan, last_scanned_at)
 
         if scan.status in [ScanStatus.FINISHED, ScanStatus.CANCELED]:
             break

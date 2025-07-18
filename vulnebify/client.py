@@ -117,7 +117,7 @@ class VulnebifyKey:
 
             return GeneratedKey.model_validate_json(response)
 
-    def active(self) -> bool:
+    def is_activated(self) -> bool:
         with self.__client as client:
             try:
                 _ = client.get(f"/key")
