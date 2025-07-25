@@ -14,11 +14,11 @@ class OutputType(str, Enum):
 
 class Output(ABC):
     @abstractmethod
-    def print_checkout(self, api_key_hash: str):
+    def print_login(self, api_key_hash: str):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_checkout_progress(self, timeout_sec: int, taken_sec: int):
+    def print_login_progress(self, timeout_sec: int, taken_sec: int):
         raise NotImplementedError()
 
     @abstractmethod
@@ -80,16 +80,16 @@ class Output(ABC):
 
 
 class HumanOutput(Output):
-    def print_checkout(self, api_key_hash: str):
+    def print_login(self, api_key_hash: str):
         message = f"""To retrieve your API key, visit the following URL in your browser:
 
-🔗 https://vulnebify.com/checkout?api_key_hash={api_key_hash}
+🔗 https://vulnebify.com/login/?api_key_hash={api_key_hash}
 
 Never share your API key. It grants full access to your Vulnebify account.
 """
         print(message)
 
-    def print_checkout_progress(self, timeout_sec: int, taken_sec: int):
+    def print_login_progress(self, timeout_sec: int, taken_sec: int):
         # Refresh status line (ending one)
         sys.stdout.write("\033[F\033[K")
 
@@ -309,16 +309,16 @@ vulnebify get scan {scan_id}
 
 
 class JsonOutput(Output):
-    def print_checkout(self, api_key_hash: str):
+    def print_login(self, api_key_hash: str):
         out = json.dumps(
             {
-                "checkout_url": f"https://vulnebify.com/checkout?api_key_hash={api_key_hash}",
+                "login_url": f"https://vulnebify.com/login/?api_key_hash={api_key_hash}",
             },
             indent=2,
         )
         print(out)
 
-    def print_checkout_progress(self, _: int, taken_sec: int):
+    def print_login_progress(self, _: int, taken_sec: int):
         out = json.dumps(
             {
                 "status": "running",

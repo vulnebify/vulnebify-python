@@ -92,13 +92,13 @@ def login(api_key: str | None, api_url: str):
         save_api_key(api_key)
         return
 
-    _output.print_checkout(generated_key.api_key_hash)
+    _output.print_login(generated_key.api_key_hash)
 
     vulnebify = Vulnebify(generated_key.api_key, api_url)
     retry = 0
 
     while not vulnebify.key.is_activated() and retry <= CHECKOUT_TIMEOUT_SEC:
-        _output.print_checkout_progress(CHECKOUT_TIMEOUT_SEC, retry)
+        _output.print_login_progress(CHECKOUT_TIMEOUT_SEC, retry)
 
         retry += 1
         time.sleep(1)
