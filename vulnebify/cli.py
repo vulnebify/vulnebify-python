@@ -17,7 +17,6 @@ CONFIG_PATH = os.path.expanduser("~/.vulnebifyrc")
 
 VULNEBIFY_API_KEY = "VULNEBIFY_API_KEY"
 VULNEBIFY_API_URL = "VULNEBIFY_API_URL"
-CHECKOUT_TIMEOUT_SEC = 3600
 
 _vulnebify: Vulnebify | None = None
 _output: Output = HumanOutput()
@@ -54,10 +53,16 @@ def get_api_key():
     return None
 
 
-def save_api_key(api_key: str):
+def save_active_api_key(api_key: str):
     with open(CONFIG_PATH, "w") as f:
         json.dump({"api_key": api_key}, f)
-        _output.print_api_key_saved(api_key)
+        _output.print_active_api_key(api_key)
+
+
+def save_inactive_api_key(api_key: str, api_key_hash: str):
+    with open(CONFIG_PATH, "w") as f:
+        json.dump({"api_key": api_key}, f)
+        _output.print_inactive_api_key(api_key_hash)
 
 
 def input_api_key(api_key: str | None):
@@ -65,7 +70,7 @@ def input_api_key(api_key: str | None):
         api_key
         or os.getenv(VULNEBIFY_API_KEY)
         or getpass.getpass(
-            "🔒 Provide API key (key_*) to secure input. Press ENTER if you don't have one yet 🔑: "
+            "Provide API key (key_*) to secure input. Press ENTER if you don't have one yet 🔑: "
         )
     )
 
@@ -77,7 +82,7 @@ def login(api_key: str | None, api_url: str):
         vulnebify = Vulnebify(api_key, api_url)
 
         if vulnebify.key.is_activated():
-            save_api_key(api_key)
+            save_active_api_key(api_key)
         else:
             message = "🛑 API key is not active. Run 'vulnebify login' again. Check --api-key argument, VULNEBIFY_API_KEY environment variable, or input value."
             raise VulnebifyError(message)
@@ -88,22 +93,7 @@ def login(api_key: str | None, api_url: str):
 
     generated_key = vulnebify.key.generate()
 
-    if generated_key.active:
-        save_api_key(api_key)
-        return
-
-    _output.print_login(generated_key.api_key_hash)
-
-    vulnebify = Vulnebify(generated_key.api_key, api_url)
-    retry = 0
-
-    while not vulnebify.key.is_activated() and retry <= CHECKOUT_TIMEOUT_SEC:
-        _output.print_login_progress(CHECKOUT_TIMEOUT_SEC, retry)
-
-        retry += 1
-        time.sleep(1)
-
-    save_api_key(generated_key.api_key)
+    save_inactive_api_key(generated_key.api_key, generated_key.api_key_hash)
 
 
 def run_scan(

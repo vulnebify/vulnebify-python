@@ -14,15 +14,11 @@ class OutputType(str, Enum):
 
 class Output(ABC):
     @abstractmethod
-    def print_login(self, api_key_hash: str):
+    def print_active_api_key(self, api_key: str):
         raise NotImplementedError()
 
     @abstractmethod
-    def print_login_progress(self, timeout_sec: int, taken_sec: int):
-        raise NotImplementedError()
-
-    @abstractmethod
-    def print_api_key_saved(self, api_key: str):
+    def print_inactive_api_key(self, api_key: str, api_key_hash: str):
         raise NotImplementedError()
 
     @abstractmethod
@@ -80,28 +76,18 @@ class Output(ABC):
 
 
 class HumanOutput(Output):
-    def print_login(self, api_key_hash: str):
-        message = f"""To retrieve your API key, visit the following URL in your browser:
-
-🔗 https://vulnebify.com/login/?api_key_hash={api_key_hash}
-
-Never share your API key. It grants full access to your Vulnebify account.
-"""
-        print(message)
-
-    def print_login_progress(self, timeout_sec: int, taken_sec: int):
-        # Refresh status line (ending one)
-        sys.stdout.write("\033[F\033[K")
-
-        print(
-            f"🔄 Still waiting for checkout... ({timeout_sec - taken_sec}s remaining)"
-        )
-
-    def print_api_key_saved(self, api_key: str):
+    def print_active_api_key(self, _: str):
         message = """⚠️  Use Vulnebify responsibly. Only scan systems you own or have explicit permission to test.
 Violation may lead to legal consequences. See terms and conditions: https://vulnebify.com/terms
 
 ✅ API key saved successfully!"""
+        print(message)
+
+    def print_inactive_api_key(self, api_key_hash: str):
+        message = f"""
+To activate your API key, visit the following URL in your browser:
+🔗 https://vulnebify.com/login/?api_key_hash={api_key_hash}
+"""
         print(message)
 
     def print_host(self, host: Host):
@@ -309,35 +295,22 @@ vulnebify get scan {scan_id}
 
 
 class JsonOutput(Output):
-    def print_login(self, api_key_hash: str):
-        out = json.dumps(
-            {
-                "login_url": f"https://vulnebify.com/login/?api_key_hash={api_key_hash}",
-            },
-            indent=2,
-        )
-        print(out)
-
-    def print_login_progress(self, _: int, taken_sec: int):
-        out = json.dumps(
-            {
-                "status": "running",
-                "progress": {
-                    "taken_sec": taken_sec,
-                },
-            },
-            indent=2,
-        )
-        print(out)
-
-    def print_api_key_saved(self, api_key: str):
+    def print_active_api_key(self, api_key: str):
         out = json.dumps(
             {
                 "api_key_last4": api_key[:4] + "*" * (len(api_key) - 8) + api_key[-4:],
                 "caution": "⚠️  Use Vulnebify responsibly. Only scan systems you own or have explicit permission to test. Violation may lead to legal consequences.",
-                "terms": "https://vulnebify.com/terms",
+                "terms_url": "https://vulnebify.com/terms",
             },
             ensure_ascii=False,
+        )
+        print(out)
+
+    def print_inactive_api_key(self, api_key_hash: str):
+        out = json.dumps(
+            {
+                "activation_url": f"https://vulnebify.com/login/?api_key_hash={api_key_hash}",
+            },
         )
         print(out)
 
