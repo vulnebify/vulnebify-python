@@ -66,12 +66,8 @@ def save_inactive_api_key(api_key: str, api_key_hash: str):
 
 
 def input_api_key(api_key: str | None):
-    return (
-        api_key
-        or os.getenv(VULNEBIFY_API_KEY)
-        or getpass.getpass(
-            "Provide API key (key_*) to secure input. Press ENTER if you don't have one yet 🔑: "
-        )
+    return api_key or getpass.getpass(
+        "Provide API key (key_*) to secure input. Press ENTER if you don't have one yet 🔑: "
     )
 
 
@@ -84,7 +80,7 @@ def login(api_key: str | None, api_url: str):
         if vulnebify.key.is_activated():
             save_active_api_key(api_key)
         else:
-            message = "🛑 API key is not active. Run 'vulnebify login' again. Check --api-key argument, VULNEBIFY_API_KEY environment variable, or input value."
+            message = "🛑 API key is not active. Run 'vulnebify login' again. Check --api-key argument or input value."
             raise VulnebifyError(message)
 
         return
