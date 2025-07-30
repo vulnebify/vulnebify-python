@@ -189,10 +189,10 @@ To activate your API key, visit the following URL in your browser:
 
         print("")
 
-        if scan.logs:
-            print(f"=== Logs ===")
-            for log in scan.logs:
-                print(f"Scanned: {log.entry}")
+        if scan.hosts:
+            print(f"=== Hosts ===")
+            for host in scan.hosts:
+                print(f"Scanned: {host.ip_str}")
 
         if scan.reports:
             print("")
