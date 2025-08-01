@@ -2,6 +2,9 @@
 
 ⚡️ A fast, portable CLI to scan assets, view results, and integrate the Vulnebify API into your workflows with real-time, structured output.
 
+[![Run Tests](https://github.com/vulnebify/vulnebify-python/actions/workflows/run_tests.yaml/badge.svg)](https://github.com/vulnebify/vulnebify-python/actions/workflows/run_tests.yaml)
+[![Publish Release](https://github.com/vulnebify/vulnebify-python/actions/workflows/publish_release.yaml/badge.svg)](https://github.com/vulnebify/vulnebify-python/actions/workflows/publish_release.yaml)
+
 🔹[Profile entire country within minutes](https://asciinema.org/a/727291)
 
 🔹[Scan 65k ports in 7 seconds](https://asciinema.org/a/727292)
