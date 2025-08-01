@@ -8,10 +8,10 @@ import getpass
 from typing import List
 from datetime import datetime
 
-from .client import Vulnebify
-from .models import Scan, ScanStatus
-from .errors import VulnebifyError
-from .output import OutputType, Output, HumanOutput, JsonOutput
+from vulnebify.client import Vulnebify
+from vulnebify.models import Scan, ScanStatus
+from vulnebify.errors import VulnebifyError
+from vulnebify.output import OutputType, Output, HumanOutput, JsonOutput
 
 CONFIG_PATH = os.path.expanduser("~/.vulnebifyrc")
 

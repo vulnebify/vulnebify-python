@@ -6,8 +6,8 @@ import uuid
 from urllib3.util.retry import Retry
 from typing import List
 
-from .errors import *
-from .models import *
+from vulnebify.errors import *
+from vulnebify.models import *
 
 
 class Idempotency:

@@ -3,8 +3,8 @@ import sys
 
 from abc import ABC, abstractmethod
 
-from .models import *
-from .errors import VulnebifyError, VulnebifyApiError
+from vulnebify.models import *
+from vulnebify.errors import VulnebifyError, VulnebifyApiError
 
 
 class OutputType(str, Enum):

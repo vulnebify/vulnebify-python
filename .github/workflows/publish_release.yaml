@@ -1,0 +1,53 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Build & Publish to PyPI + GitHub Executable
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install System Dependencies
+        run: |
+          apt-get update
+          apt-get install -y build-essential python3-dev patchelf
+
+      - name: Install Build Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install setuptools wheel twine nuitka
+
+      - name: Build PyPI Package
+        run: |
+          python setup.py sdist bdist_wheel
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+        run: |
+          twine upload dist/*
+
+      - name: Build Standalone Executable with Nuitka
+        run: |
+          nuitka vulnebify/cli.py --onefile --output-dir=build --output-filename=vulnebify
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*
+            build/vulnebify
+          generate_release_notes: true

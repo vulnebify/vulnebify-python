@@ -1,1 +1,1 @@
-from .client import Vulnebify
+from vulnebify.client import Vulnebify
