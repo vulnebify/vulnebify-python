@@ -16,6 +16,7 @@ class GeneratedKey(BaseModel):
 class ScanStatus(str, Enum):
     QUEUED = "queued"
     RUNNING = "running"
+    FINALIZING = "finalizing"
     FINISHED = "finished"
     CANCELED = "canceled"
 
