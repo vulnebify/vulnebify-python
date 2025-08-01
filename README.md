@@ -51,7 +51,16 @@ https://vulnebify.com/scan/SCAN_ID
 pip install vulnebify
 ```
 
-### From GitHub
+### From Release
+
+Download the latest precompiled binary from the [Releases](https://github.com/vulnebify/vulnebify-python/releases) page:
+
+```bash
+chmod +x vulnebify
+./vulnebify
+```
+
+### From Sources
 
 ```bash
 git clone https://github.com/vulnebify/vulnebify-python.git && cd vulnebify-python && python3 -m venv .venv && source .venv/bin/activate && pip install .
