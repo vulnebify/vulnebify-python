@@ -56,8 +56,7 @@ pip install vulnebify
 Download the latest precompiled binary from the [Releases](https://github.com/vulnebify/vulnebify-python/releases) page:
 
 ```bash
-chmod +x vulnebify
-./vulnebify
+chmod +x vulnebify && ./vulnebify
 ```
 
 ### From Sources
