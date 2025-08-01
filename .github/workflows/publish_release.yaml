@@ -42,7 +42,7 @@ jobs:
 
       - name: Build Standalone Executable with Nuitka
         run: |
-          nuitka vulnebify/cli.py --onefile --output-dir=build --output-filename=vulnebify
+          nuitka vulnebify/cli.py --onefile --standalone --output-dir=build --output-filename=vulnebify --follow-imports
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
