@@ -31,5 +31,7 @@ jobs:
           pip install .
 
       - name: Run tests
+        env:
+          VULNEBIFY_API_KEY: ${{ secrets.VULNEBIFY_API_KEY }}
         run: |
           pytest .
