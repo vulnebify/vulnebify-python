@@ -66,6 +66,9 @@ class Protocol(str, Enum):
     REDIS = "redis"
     VNC = "vnc"
     TELNET = "telnet"
+    S7 = "s7"
+    MODBUS = "modbus"
+    EIP = "eip"
     UNKNOWN = "unknown"
 
 
