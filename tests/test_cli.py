@@ -68,6 +68,28 @@ def test_run_scan_ip():
     assert "Scan started with ID" in result.stdout
 
 
+def test_run_scan_ip_full_range_ports():
+    result = subprocess.run(
+        ["vulnebify", "run", "scan", "45.33.32.156", "-p-", "--wait"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert "Scan started with ID" in result.stdout
+
+    result = subprocess.run(
+        ["vulnebify", "get", "host", "45.33.32.156", "-o", "json"],
+        capture_output=True,
+        text=True,
+    )
+
+    json = parse_json_output(result.stdout)
+    print(json)
+    ports = [s["port"] for s in json[0]["services"]]
+
+    assert set(ports) == {22, 80, 9929, 31337}
+
+
 # vulnebify run scan 1.1.1.1 --wait
 def test_run_scan_ip_with_wait():
     result = subprocess.run(

@@ -39,6 +39,12 @@ def parse_scopes(args):
     return []
 
 
+def parse_ports(args):
+    if not args.ports:
+        return ["top100"]  # default
+    return ["top65535" if p == "-" else p for p in args.ports]
+
+
 def get_api_key():
     api_key = os.getenv(VULNEBIFY_API_KEY)
 
@@ -203,7 +209,7 @@ def cli():
     run_scans_parser.add_argument("-p", "--ports", nargs="*", help="Ports to scan (default: top100)")
     run_scans_parser.add_argument("-s", "--scanners", nargs="*", help="Scanners to use (default: empty)")
     run_scans_parser.add_argument("-w", "--wait", action="store_true", help="Wait for scan to finish (default: false)")
-    run_scans_parser.set_defaults(func=lambda args: run_scan(parse_scopes(args), args.ports or ["top100"], args.scanners or [], args.wait))
+    run_scans_parser.set_defaults(func=lambda args: run_scan(parse_scopes(args), parse_ports(args), args.scanners or [], args.wait))
 
     # CANCEL group
     cancel_parser = subparsers.add_parser("cancel", help="Cancel scan")
