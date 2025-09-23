@@ -82,14 +82,16 @@ git clone https://github.com/vulnebify/vulnebify-python.git && cd vulnebify-pyth
 ### `run scan`
 
 | Command                                                                       | Description                                                                                                         |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+|-------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
 | `vulnebify run scan 45.33.32.156`                                             | Run scan for a IP scanning scope.                                                                                   |
 | `vulnebify run scan 45.33.32.156 --output json`                               | Run scan for a IP scanning scope with `json` output. Default: `human`.                                              |
 | `vulnebify run scan 45.33.32.156  --wait`                                     | Run scan for a IP scanning scope and block until the scan finishes.                                                 |
-| `vulnebify run scan vulnebify.com --ports TOP1000`                            | Run scan for a IP scanning scope to check `TOP1000` ports. Default: `TOP100`.                                       |
+| `vulnebify run scan 45.33.32.156 --ports TOP1000`                             | Run scan for a IP scanning scope to check `TOP1000` ports. Default: `TOP100`.                                       |
+| `vulnebify run scan 45.33.32.156 -p-`                                         | Run scan for a IP scanning scope to check full-range (65,535) ports. Default: `TOP100`.                             |
 | `vulnebify run scan vulnebify.com --scanners subdomain`                       | Run scan for a domain scanning scope and enumerate subdomains with `subdomain` scanner.                             |
 | `vulnebify run scan 193.176.180.0/22 -p 554 --scanners rtsp`                  | Run scan for a CIDR scanning scope to check a single `554` port with detailed checks for RTSP using `rtsp` scanner. |
 | `vulnebify run scan 45.33.32.156 vulnebify.com 193.176.180.0/22 -p 8000-9000` | Run scan for multiple scanning scopes to check `8000-9000` port range.                                              |
+
 
 📥 Piping is supported too:
 ```bash
